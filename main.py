@@ -1,8 +1,11 @@
 import pygame
 from core.game import Game
+from core import audio
 
 def main():
     pygame.init()
+    audio.init_audio()
+    audio.play_menu_music()
     screen = pygame.display.set_mode((1280, 720))
     pygame.display.set_caption("MARS: R-ARK PROTOCOL")
     clock = pygame.time.Clock()

@@ -1,9 +1,3 @@
-"""
-Laboratory UI — відкривається клавішею L поруч з лабораторією.
-Ліво: категорії + список логів
-Право: текст логу
-Низ: черга аналізу + кнопки
-"""
 from __future__ import annotations
 import pygame
 import math
@@ -29,11 +23,11 @@ CATEGORIES = [
 ]
 
 CAT_LABELS = {
-    LogCategory.SYSTEM:   "SYSTEM",
-    LogCategory.SIGNAL:   "SIGNALS",
+    LogCategory.SYSTEM:   "СИСТЕМА",
+    LogCategory.SIGNAL:   "СИГНАЛИ",
     LogCategory.RARK:     "R-ARK",
-    LogCategory.OBSERVER: "OBSERVER",
-    LogCategory.CORRUPT:  "CORRUPT",
+    LogCategory.OBSERVER: "СПОСТЕРІГАЧІ",
+    LogCategory.CORRUPT:  "C0RRUPT",
 }
 
 
@@ -63,7 +57,7 @@ class LaboratoryUI:
     def toggle(self):
         self._visible = not self._visible
 
-    # ---------------------------------------------------------------- events
+    #ПОДІЇ
 
     def handle_event(self, event: pygame.event.Event,
                      lab: LaboratoryManager,
@@ -128,7 +122,7 @@ class LaboratoryUI:
 
         return self._visible
 
-    # ---------------------------------------------------------------- render
+    #РЕНДЕР
 
     def render(self, screen: pygame.Surface, lab: LaboratoryManager,
                has_lab: bool):
@@ -148,14 +142,14 @@ class LaboratoryUI:
 
         # Заголовок
         title = fonts.get(15, bold=True).render(
-            "// LABORATORY — LORE ANALYSIS //", True, self.GOLD
+            "// ЛАБОРАТОРІЯ - АНАЛІЗ ЛОРУ //", True, self.GOLD
         )
         screen.blit(title, (px + W//2 - title.get_width()//2, py + 8))
 
         # Прогрес логів
         prog = fonts.get(10).render(
-            f"LOGS: {lab.discovered_count}/{lab.total_logs}  "
-            f"CRITICAL: {lab.critical_found}/{lab.critical_total}",
+            f"ЛОГИ: {lab.discovered_count}/{lab.total_logs}  "
+            f"КРИТИЧНІ: {lab.critical_found}/{lab.critical_total}",
             True, self.DIM
         )
         screen.blit(prog, (px + W - prog.get_width() - PADDING, py + 10))
@@ -178,7 +172,7 @@ class LaboratoryUI:
         self._render_detail(screen, px, py, lab)
         self._render_bottom(screen, px, py, lab, has_lab)
 
-    # ---------------------------------------------------------------- panels
+    # Панелі
 
     def _render_categories(self, screen, px, py, lab):
         for i, cat in enumerate(CATEGORIES):
@@ -236,9 +230,9 @@ class LaboratoryUI:
                 title_color = self.DIM
                 title_text  = "[ ENCRYPTED ]"
                 if log.log_type == LogType.RESEARCH:
-                    title_text = "[ REQUIRES LAB ]"
+                    title_text = "[ Потрібна лабораторія ]"
                 elif log.log_type == LogType.SIGNAL:
-                    title_text = "[ SIGNAL FRAGMENT ]"
+                    title_text = "[ Фрагмент ]"
 
             lbl = fonts.get(10).render(title_text[:22], True, title_color)
             surf.blit(lbl, (6, ry + 4))
@@ -255,7 +249,7 @@ class LaboratoryUI:
         dw = DETAIL_W - PADDING * 2
 
         if not self._selected:
-            hint = fonts.get(10).render("Select a log entry.", True, self.DIM)
+            hint = fonts.get(10).render("Виберіть лог.", True, self.DIM)
             screen.blit(hint, (dx, dy + 20))
             return
 
@@ -299,7 +293,7 @@ class LaboratoryUI:
             if log.critical:
                 dy += 4
                 cr = fonts.get(9, bold=True).render(
-                    "★ CRITICAL LOG", True, self.GOLD
+                    "★ КРИТИЧНИЙ ЛОГ", True, self.GOLD
                 )
                 screen.blit(cr, (dx, dy))
         else:

@@ -1,7 +1,7 @@
-from __future__ import annotations
 import pygame
 import math
 import random
+from core import audio
 from entities.building import (
     Building, BuildingType, BuildingState,
     BUILDING_DEFS, INVENTORY_ORDER,
@@ -18,13 +18,10 @@ ICON_SIZE    = 56
 GHOST_ALPHA  = 160
 PLACE_RADIUS = 3
 
-REACTOR_OUTPUT   = 18.0   # energy/tick
-BATTERY_CAPACITY = 150.0  # додаткова ємність
-BATTERY_CHARGE_RATE  = 3.0  # energy/tick зарядка
-BATTERY_DISCHARGE_RATE = 6.0  # energy/tick розрядка при потребі
+REACTOR_OUTPUT   = 18.0   # енергія за тік (секунду) від реактора при наявності урану
 
 
-# ── Частинка диму ────────────────────────────────────────────────────────────
+# Частинка диму
 class _SmokeParticle:
     def __init__(self, x: float, y: float):
         self.x   = x + random.uniform(-6, 6)
@@ -55,7 +52,7 @@ class _SmokeParticle:
         surf.blit(s, (int(self.x - self.r), int(self.y - self.r)))
 
 
-# ── Менеджер будівель ─────────────────────────────────────────────────────────
+#Менеджер будівель, відповідає за розміщення, стан і рендер будівель на карті.
 class BuildingManager:
 
     def __init__(self):
@@ -70,9 +67,8 @@ class BuildingManager:
         self._construction  = ConstructionQueue()
         self._workers_ok:   dict[tuple[int,int], bool] = {}
         self.blueprint_inv  = BlueprintInventory()
-        self._battery_charge: dict[tuple[int,int], float] = {}  # поточний заряд
 
-    # ---------------------------------------------------------------- icons
+    #ІКОНКИ!!!!!!!!
 
     def load_icons(self):
         for bt in BuildingType:
@@ -82,7 +78,7 @@ class BuildingManager:
                 self._icons[bt] = pygame.transform.scale(img, (ICON_SIZE, ICON_SIZE))
             except Exception:
                 surf = pygame.Surface((ICON_SIZE, ICON_SIZE), pygame.SRCALPHA)
-                # Заглушка з кольором і літерою
+                # Заглушка з кольором і літерою, якщо немає спрайтів
                 colors = {
                     BuildingType.HUB:        (255, 255, 255),
                     BuildingType.HABITAT:    (180, 180, 220),
@@ -107,7 +103,7 @@ class BuildingManager:
                     center=(ICON_SIZE//2, ICON_SIZE//2)))
                 self._icons[bt] = surf
 
-    # ---------------------------------------------------------------- ghost
+    # "Привид" будівлі при розміщенні
 
     def start_placement(self, bt: BuildingType):
         self._ghost_type = bt
@@ -151,6 +147,9 @@ class BuildingManager:
         # Перевірка blueprint
         if not self.blueprint_inv.can_build(bt.value):
             return False
+        # Перевірка єдиного хабу
+        if bt == BuildingType.HUB and any(b.type == BuildingType.HUB for b in self._buildings.values()):
+            return False
         if not resources.consume_many(defn.cost):
             return False
         self.blueprint_inv.consume_for_build(bt.value)
@@ -159,18 +158,21 @@ class BuildingManager:
         world.grid[self._ghost_ty][self._ghost_tx].building = bt.value
         if defn.gives_storage:
             resources.add_storage(1)
+        if bt == BuildingType.BATTERY:
+            resources.add_energy_capacity(100)
         self._construction.add(b, free_workers)
         self._update_connectivity(world)
         self.cancel_placement()
+        audio.play_sound('build')
         return True
 
-    # ---------------------------------------------------------------- tick
+    #ТІК!!!!!!!!
 
     def tick(self, resources: ResourceSystem, world: World, dt: float,
              workers_map: dict | None = None, mods_solar: float = 1.0):
         # Будівництво
         self._construction.tick(self._buildings, dt)
-        # Workers map з PopulationManager
+        # Працівники 
         if workers_map is not None:
             self._workers_ok = workers_map
 
@@ -182,7 +184,7 @@ class BuildingManager:
                 BuildingState.CONSTRUCTING,
             ):
                 continue
-            # Перевірка workers
+            # Перевірка працівників (для будівель що потребують)
             if not self._workers_ok.get((tx, ty), True):
                 b.state = BuildingState.INACTIVE
                 continue
@@ -220,30 +222,13 @@ class BuildingManager:
                         resources.add(Resource.ENERGY, REACTOR_OUTPUT * dt)
                     else:
                         b.state = BuildingState.NO_RESOURCE
-                elif b.type == BuildingType.BATTERY:
-                    # Батарея: заряджається коли є надлишок, розряджається при потребі
-                    key = (b.tx, b.ty)
-                    charge = self._battery_charge.get(key, 0.0)
-                    energy_ratio = resources.ratio(Resource.ENERGY)
-                    if energy_ratio > 0.8 and charge < BATTERY_CAPACITY:
-                        # Заряджаємо
-                        taken = min(BATTERY_CHARGE_RATE * dt,
-                                    BATTERY_CAPACITY - charge)
-                        if resources.consume(Resource.ENERGY, taken):
-                            charge += taken
-                    elif energy_ratio < 0.3 and charge > 0:
-                        # Розряджаємо
-                        give = min(BATTERY_DISCHARGE_RATE * dt, charge)
-                        resources.add(Resource.ENERGY, give)
-                        charge -= give
-                    self._battery_charge[key] = charge
                 elif b.type == BuildingType.EXTRACTOR:
                     for tile_res_name, richness in tile.resources.as_dict().items():
                         out_resource, out_amount = ResourceSystem.extractor_output(
                             tile_res_name, richness, dt
                         )
                         resources.add(out_resource, out_amount)
-            # Відновлюємо стан якщо все добре
+            # Відновлюємо стан якщо все добре (мабуть)
             if b.state in (BuildingState.INACTIVE, BuildingState.NO_RESOURCE):
                 b.state = BuildingState.ACTIVE
 
@@ -253,7 +238,7 @@ class BuildingManager:
                 self._smoke_timer[key] = self._smoke_timer.get(key, 0.0) + dt
                 if self._smoke_timer[key] >= 0.3:
                     self._smoke_timer[key] = 0.0
-                    # Позиція диму буде розрахована при рендері
+                    # Позиція диму буде розрахована при рендері 
                     self._smoke.append(
                         _SmokeParticle(b.tx * 64 + 32, b.ty * 64 + 8)
                     )
@@ -263,7 +248,7 @@ class BuildingManager:
 
         self._update_connectivity(world)
 
-    # ---------------------------------------------------------------- connectivity
+    # Підключення (аби не було "островів" будівель без зв'язку з хабом)
 
     def _update_connectivity(self, world: World):
         hubs = [pos for pos, b in self._buildings.items() if b.type == BuildingType.HUB]
@@ -296,13 +281,16 @@ class BuildingManager:
                     continue
                 for nx, ny in [(cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)]:
                     if (nx, ny) in self._buildings:
-                        queue.append((nx, ny))
+                        nb = self._buildings[(nx, ny)]
+                        if nb.type in need_connection or nb.type == BuildingType.HUB:
+                            if nb.state not in (BuildingState.DISCONNECTED, BuildingState.CONSTRUCTING, BuildingState.DAMAGED):
+                                queue.append((nx, ny))
             if not connected:
                 b.state = BuildingState.DISCONNECTED
             elif b.state == BuildingState.DISCONNECTED:
                 b.state = BuildingState.ACTIVE
 
-    # ---------------------------------------------------------------- query
+    # ІНШЕ
 
     def get_at(self, tx: int, ty: int) -> Building | None:
         return self._buildings.get((tx, ty))
@@ -310,7 +298,7 @@ class BuildingManager:
     def all(self):
         return self._buildings.values()
 
-    # ---------------------------------------------------------------- render
+    #РЕНДЕР!!!!!!!!!
 
     def render(self, screen: pygame.Surface, camera: Camera, world: World):
         ts     = world.TILE_SIZE
@@ -344,16 +332,16 @@ class BuildingManager:
         t    = b._anim_time
         fx   = b.definition.fx
 
-        # Стан overlay (неактивне — затемнення)
+        # Стан overlay (неактивне - затемнення)
         if b.state == BuildingState.INACTIVE:
             dim = pygame.Surface((ts, ts), pygame.SRCALPHA)
             dim.fill((0, 0, 0, 140))
             screen.blit(dim, (sx, sy))
 
-        # Іконка
+        # Іконка!
         if icon:
             render_icon = icon
-            # Glow ефект (Greenhouse, Jammer) — мерехтіння яскравості
+            # Ефект світіння для активних теплиць і лабораторій
             if "glow" in fx and b.is_active:
                 glow_alpha = int(180 + 60 * math.sin(t * 2.5))
                 glow = pygame.Surface((ts, ts), pygame.SRCALPHA)
@@ -362,7 +350,7 @@ class BuildingManager:
                 screen.blit(glow, (sx, sy))
             screen.blit(render_icon, (sx + offset, sy + offset))
 
-        # Pulse (Hub) — зовнішнє кільце
+        # Пульсація (Hub) - зовнішнє кільце
         if "pulse" in fx and b.is_active:
             pulse_r = int(ts * 0.55 + 6 * math.sin(t * 1.8))
             pulse_a = int(120 + 80 * math.sin(t * 1.8))
@@ -372,7 +360,7 @@ class BuildingManager:
             screen.blit(ps, (sx + ts // 2 - pulse_r - 1,
                               sy + ts // 2 - pulse_r - 1))
 
-        # Blink (Laboratory, Habitat) — миготливий індикатор
+        # Миготіння (Laboratory, Habitat) - миготливий індикатор
         if "blink" in fx and b.is_active:
             blink_on = math.sin(t * 3.0) > 0
             if blink_on:
@@ -397,7 +385,7 @@ class BuildingManager:
         pygame.draw.rect(screen, b.border_color,
                          pygame.Rect(sx, sy, ts, ts), 2)
 
-        # Іконка стану (окрім ACTIVE)
+        # Іконка стану (окрім активного)
         if b.state != BuildingState.ACTIVE:
             self._render_state_icon(screen, b.state, sx + ts - 18, sy + 2)
 

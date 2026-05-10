@@ -1,13 +1,4 @@
-"""
-Lore system: logs, signal fragments, laboratory analysis queue.
-
-Log types:
-  STORY  — автоматично по днях
-  RESEARCH — через лабораторію (energy + workers + time)
-  SIGNAL — знайдені ровером, аналізуються в лабораторії
-
-Fragment rarity: COMMON / RARE / EPIC / FORBIDDEN
-"""
+# Система лору і логів. Відповідає за зберігання інформації про всі логи, їх відкриття, а також за механіку дослідження і відкриття нових логів через лабораторію.
 from __future__ import annotations
 import random
 from dataclasses import dataclass, field
@@ -21,11 +12,11 @@ class LogType(Enum):
 
 
 class LogCategory(Enum):
-    SYSTEM   = "SYSTEM"
-    SIGNAL   = "SIGNALS"
+    SYSTEM   = "СИСТЕМА"
+    SIGNAL   = "СИГНАЛИ"
     RARK     = "R-ARK"
-    OBSERVER = "OBSERVER"
-    CORRUPT  = "CORRUPTION"
+    OBSERVER = "СПОСТЕРІГАЧІ"
+    CORRUPT  = "C0RRUPT"
 
 
 class FragmentRarity(Enum):
@@ -72,67 +63,67 @@ class LogEntry:
     discovered:  bool = False
 
 
-# ── Всі логи гри ─────────────────────────────────────────────────────────────
+#Всі логи гри
 
 ALL_LOGS: list[LogEntry] = [
 
     # STORY LOGS — автоматично
     LogEntry(
-        id="s01", title="Colony Uplink Established",
+        id="s01", title="Колонія на зв'язку",
         date="DAY 01 / 2091", category=LogCategory.SYSTEM,
         log_type=LogType.STORY, unlock_day=1,
         text=[
-            "Mars Colony Alpha — uplink confirmed.",
-            "Earth communication: LOST.",
-            "<< last signal received 14 hours ago >>",
-            "R-ARK-NET: operating normally.",
-            "Begin resource extraction protocol.",
+            "КОЛОНІЯ НА МАРСІ АЛЬФА.",
+            "ЗВ'ЯЗОК З ЗЕМЛЕЮ: LOST.",
+            "<< останній сигнал отримано: 14 годин тому >>",
+            "R-ARK-NET: працює успішно.",
+            "Почати протокол видобування.",
         ]
     ),
     LogEntry(
-        id="s02", title="Atmospheric Warning",
+        id="s02", title="Атмосферні збурення",
         date="DAY 05 / 2091", category=LogCategory.SYSTEM,
         log_type=LogType.STORY, unlock_day=5,
         text=[
-            "Dust storm frequency: ELEVATED.",
-            "Solar efficiency reduced by 40% during events.",
-            "R-ARK-NET recommends reactor construction.",
-            "<< static >>",
+            "Частота пилових бурь: ВИСОКА.",
+            "Ефективність сонячних панелей зменшена на 40% під час подій.",
+            "R-ARK-NET рекомендує будівництво реактора.",
+            "<< білий шум >>",
         ]
     ),
     LogEntry(
-        id="s03", title="R-ARK Signal Anomaly",
+        id="s03", title="АНОМАЛІЯ СИГНАЛУ R-ARK",
         date="DAY 10 / 2091", category=LogCategory.RARK,
         log_type=LogType.STORY, unlock_day=10, critical=True,
         text=[
-            "R-ARK-NET: Unrecognized signal pattern detected.",
-            "Source: unknown. Frequency: non-standard.",
-            "Executive recommendation: IGNORE.",
-            "Note: this recommendation is mandatory.",
+            "R-ARK-NET: Невідомий патерн сигналу.",
+            "Джерело: unknown. Частота: не стандартна.",
+            "Рекомендація: ІГНОРУВАТИ.",
+            "P.S.: ця рекомендація ОБОВ'ЯЗКОВА.",
         ]
     ),
     LogEntry(
-        id="s04", title="Transmission Fragment",
+        id="s04", title="Фрагмент Трансмітії",
         date="DAY 15 / 2091", category=LogCategory.SIGNAL,
         log_type=LogType.STORY, unlock_day=15, critical=True,
         text=[
-            "...they are watching...",
-            "<< transmission source: unidentified >>",
-            "<< frequency: matches no known satellite >>",
-            "R-ARK-NET: NO ANOMALY DETECTED.",
-            "                    [this may be false]",
+            "...вони нас бачать...",
+            "<< джерело сигналу: unidentified >>",
+            "<< частота: matches no known satellite >>",
+            "R-ARK-NET: БЕЗ АНОМАЛІЙ.",
+            "                    [це точно не брехня =>...]",
         ]
     ),
     LogEntry(
-        id="s05", title="PCO Detection",
+        id="s05", title="Виявлення PCO",
         date="DAY 25 / 2091", category=LogCategory.OBSERVER,
         log_type=LogType.STORY, unlock_day=25, critical=True,
         text=[
-            "ALERT: Planetary Correction Object detected.",
-            "Orbital trajectory: MARS.",
-            "Estimated arrival: DAY 30.",
-            "R-ARK-NET: CORRECTION SEQUENCE INITIATED.",
-            "Activate Signal Jammer immediately.",
+            "ALERT: Planetary Correction Object помічено.",
+            "Траекторія: MARS.",
+            "Приблизне прибуття: ДЕНЬ 30.",
+            "R-ARK-NET: ой.",
+            "АКТИВУВАТИ ГЛУШИЛКУ. ПРЯМО ЗАРАЗ!",
         ]
     ),
 
@@ -142,121 +133,123 @@ ALL_LOGS: list[LogEntry] = [
         date="12.03.2089", category=LogCategory.RARK,
         log_type=LogType.RESEARCH, critical=True,
         text=[
-            "INTERNAL PRIORITY DIRECTIVE:",
-            "Mars Continuity > Earth Stability.",
-            "R-ARK-NET deployment: proceed regardless.",
-            "Earth governments: not informed.",
-            "<< document classification: FORBIDDEN >>",
+            "ПРІОРІТЕТ ██████████:",
+            "Mars колонія > Earth стабільність.",
+            "R-ARK-NET: розпочати проедуру.",
+            "Влада: не інформовано.",
+            "<< класифікація: FORBIDDEN >>",
         ]
     ),
     LogEntry(
-        id="r02", title="R-ARK-NET Architecture",
+        id="r02", title="R-ARK-NET архітектура",
         date="08.11.2088", category=LogCategory.RARK,
         log_type=LogType.RESEARCH,
         text=[
-            "R-ARK-NET: planetary coordination system.",
-            "Designed to: optimize resource extraction.",
-            "Side effect: signal amplification across",
-            "non-standard frequencies.",
-            "Risk assessment: CLASSIFIED.",
+            "R-ARK-NET: ПЛАНЕТАРНА СИСТЕМА КООРДИНАЦІЇ.",
+            "Зроблена для: оптимізації видобування ресурсів.",
+            "Побічний ефект: збиття зв'язків",
+            "не стандартні частоти.",
+            "РИЗИК: #########.",
         ]
     ),
     LogEntry(
-        id="r03", title="Observer Taxonomy",
+        id="r03", title="Таксонія Спостерігачів",
         date="unknown", category=LogCategory.OBSERVER,
         log_type=LogType.RESEARCH, critical=True,
         text=[
-            "Entities classification: OBSERVERS.",
-            "Purpose: correction of civilizations",
-            "producing anomalous signal patterns.",
-            "Method: Planetary Correction Object.",
-            "Previous corrections: [DATA EXPUNGED]",
+            "Класифікація істот: СПОСТЕРІГАЧІ.",
+            "Ціль: моніторинг цивілізацій та корекція патернів поведінки.",
+            "Мирні, якщо не провокувати (цього ж не буде, вірно?).",
+            "МЕТОД: Planetary Correction Object.",            
         ]
     ),
     LogEntry(
-        id="r04", title="Earth Last Broadcast",
+        id="r04", title="ОСТАННІЙ СИГНАЛ ІЗ ЗЕМЛІ",
         date="DAY 00 / 2091", category=LogCategory.SYSTEM,
         log_type=LogType.RESEARCH, critical=True,
         text=[
-            "This is Emergency Broadcast Alpha.",
-            "R-ARK cascade failure confirmed.",
-            "Observer response: initiated.",
-            "All Mars colonies: you are on your own.",
-            "Good luck.",
-            "<< signal lost >>",
+            "Це Система Екстреного Сповіщення Alpha.",
+            "R-ARK каскад став успішно неспраний.",         #що я пишу...
+            "Спостерігачі: стартують корекцію Землі.",
+            "Усім жителям Землі: вибачте. Ми зробили все, що могли.",
+            "Коли ви отримаєте цей сигнал, то нас вже не буде.",
+            "Всім колоніям Марсу: тепер ви самі.",
+            "Успіхів.",
+            "<< втрата сигналу >>",
         ]
     ),
     LogEntry(
-        id="r05", title="Jammer Specifications",
+        id="r05", title="Специфікації глушилки сигналів",
         date="09.07.2090", category=LogCategory.RARK,
         log_type=LogType.RESEARCH,
         text=[
-            "Signal Jammer — prototype specs.",
-            "Purpose: mask colony from Observer sensors.",
-            "Power requirement: MASSIVE.",
-            "Components: uranium core + silicon array.",
-            "Success probability: unknown.",
+            "Глушилка сигналів — характеристика.",
+            "Ціль: заховати колонію від Спостерігачів.",
+            "Кількість енергії: ВЕЛИЧЕЗНА.",
+            "Компоненти: уран + силікон.",
+            "Успіх: unknown.",
         ]
     ),
 
     # SIGNAL LOGS — знайдені ровером
     LogEntry(
-        id="f01", title="Crashed Probe — Civilian",
+        id="f01", title="Розбитий бортовий журнал",
         date="recovered", category=LogCategory.SIGNAL,
         log_type=LogType.SIGNAL,
         text=[
-            "Personal log — Dr. Vasquez.",
-            "Earth evacuation: failed.",
-            "Mars was supposed to save us.",
-            "I wonder if anyone will read this.",
+            "Щоденник — Dr. Vasquez.",
+            "Евакуація із Землі: failed.",
+            "Марс мав нас врятувати...",
+            "Цікаво, чи прочитає це хтось?",
         ]
     ),
     LogEntry(
-        id="f02", title="R-ARK Satellite Fragment",
+        id="f02", title="R-ARK супутник, фрашмент",
         date="recovered", category=LogCategory.RARK,
         log_type=LogType.SIGNAL, critical=True,
         text=[
-            "R-ARK-NET ERROR LOG #4471:",
-            "Observer signature confirmed in sector 7.",
-            "Suppression protocol: FAILED.",
-            "Recommendation: evacuation.",
-            "<< this log was marked for deletion >>",
+            "R-ARK-NET ПОМИЛКОВИЙ LOG #4471:",
+            "Спостерігачі знайдено в секторі 7.",
+            "Протокол зупинки: FAILED.",
+            "Рекомендація: евакуація.",
+            "<< цей log був переміщений в смітник >>",
+            "<< Елементи тут можна відновити, видалення через 30 днів >>",    #пародія на реальні повідомлення про видалення даних з серверів, які я бачив в інтернетах
         ]
     ),
     LogEntry(
-        id="f03", title="Observer Signal Fragment",
+        id="f03", title="Фрагмент сигналу Спостерігачів",
         date="recovered", category=LogCategory.OBSERVER,
         log_type=LogType.SIGNAL, critical=True,
         text=[
-            "<< non-human origin >>",
-            "ANOMALOUS CIVILIZATION DETECTED.",
-            "SIGNAL PATTERN: UNSTABLE.",
-            "CORRECTION: SCHEDULED.",
-            "<< end transmission >>",
+            "<< не людський сигнал >>",
+            "АНОМАЛЬ ЗНАЙДЕНА.",
+            "ПАТЕРН СИГНАЛУ: UNSTABLE.",
+            "КОРЕКЦІЯ: SCHEDULED.",
+            "<< кінець сигналу >>",
         ]
     ),
     LogEntry(
-        id="f04", title="Corrupted Drive — Unknown",
+        id="f04", title="Коруптований фрагмент флешки",
         date="recovered", category=LogCategory.CORRUPT,
         log_type=LogType.SIGNAL, corrupted=True,
         text=[
             "ΞARTH STATUS: CØRRΞCTΞD.",
             "R-ARK PR0T0C0L: [███████]",
-            "...they meant well...",
-            "...we all did...",
-            "<< data unrecoverable >>",
+            "...вони хотіли добро...",
+            "...ми всі хотіли...",
+            "<< ██████████ >>",
         ]
     ),
     LogEntry(
-        id="f05", title="Black Box — Cargo Ship",
+        id="f05", title="Чорна скринька з розбитого корабля",
         date="recovered", category=LogCategory.SYSTEM,
         log_type=LogType.SIGNAL,
         text=[
-            "Final entry — Cargo Ship Prometheus.",
-            "We were carrying Jammer components.",
-            "Storm took us down on approach.",
-            "Components are somewhere out there.",
-            "Hope someone finds this.",
+            "Фінальний запис.",
+            "Ми маємо фрагменти Jammer.",
+            "Шторм.",
+            "Компоненти розкидані.",
+            "Сподіваюся, їх хтось знайде. Координати: ██, ██.",
         ]
     ),
 ]
@@ -265,11 +258,10 @@ LOG_BY_ID: dict[str, LogEntry] = {l.id: l for l in ALL_LOGS}
 CRITICAL_LOG_IDS = {l.id for l in ALL_LOGS if l.critical}
 
 
-# ── Signal Fragment ───────────────────────────────────────────────────────────
+#Фрагменти сигналу що ровер може збирати на карті. Вони відкривають SIGNAL логи в лабораторії.
 
 @dataclass
 class SignalFragment:
-    """Фізичний об'єкт на карті що ровер може підібрати."""
     tx:     int
     ty:     int
     rarity: FragmentRarity
@@ -282,7 +274,7 @@ class SignalFragment:
 
     @property
     def label(self) -> str:
-        return f"{self.rarity.value.upper()} FRAGMENT"
+        return f"{self.rarity.value.upper()} ФРАГМЕНТ"
 
 
 def roll_fragment_rarity(rng: random.Random) -> FragmentRarity:
@@ -295,12 +287,10 @@ def roll_fragment_rarity(rng: random.Random) -> FragmentRarity:
     return FragmentRarity.COMMON
 
 
-# ── Laboratory Manager ────────────────────────────────────────────────────────
+# Менеджер лабораторії, що керує аналізом логів і відкриттям лору.
 
 @dataclass
 class LaboratoryManager:
-    """Керує аналізом логів і відкриттям лору."""
-
     _discovered: set[str] = field(default_factory=set)
     _queue:      list[str] = field(default_factory=list)   # log ids
     _timer:      float = 0.0
@@ -322,7 +312,6 @@ class LaboratoryManager:
         for r in FragmentRarity:
             self.fragments[r.value] = 0
 
-    # ---------------------------------------------------------------- query
 
     @property
     def discovered_count(self) -> int:
@@ -368,17 +357,16 @@ class LaboratoryManager:
     def current_log(self) -> LogEntry | None:
         return LOG_BY_ID.get(self._current) if self._current else None
 
-    # ---------------------------------------------------------------- story unlock
+    # Відкриття історії
 
     def check_day_unlocks(self, day: int):
-        """Автоматично відкриває STORY логи по дню."""
         for log in ALL_LOGS:
             if (log.log_type == LogType.STORY
                     and log.unlock_day <= day
                     and log.id not in self._discovered):
                 self._discover(log.id)
 
-    # ---------------------------------------------------------------- research queue
+    # Аналіз логів в лабораторії
 
     def can_analyze(self, log_id: str, has_lab: bool,
                     has_fragment: bool = False) -> bool:
@@ -405,7 +393,6 @@ class LaboratoryManager:
         return True
 
     def enqueue_signal(self, rarity: FragmentRarity) -> bool:
-        """Аналізує signal fragment з інвентарю."""
         if self.fragments.get(rarity.value, 0) <= 0:
             return False
         # Знаходимо невідкритий SIGNAL лог для цієї рідкості
@@ -432,7 +419,7 @@ class LaboratoryManager:
     def add_fragment(self, rarity: FragmentRarity):
         self.fragments[rarity.value] = self.fragments.get(rarity.value, 0) + 1
 
-    # ---------------------------------------------------------------- tick
+    #Тік
 
     def tick(self, dt: float, has_lab: bool, has_power: bool):
         self.new_discoveries.clear()
@@ -460,7 +447,7 @@ class LaboratoryManager:
         if log:
             self.new_discoveries.append(log_id)
 
-    # ---------------------------------------------------------------- secret ending
+    #Секретний фінал
 
     def secret_ending_unlocked(self) -> bool:
         return self.critical_found >= self.critical_total

@@ -1,12 +1,10 @@
-"""
-Factory system — recipe queue, blueprint inventory, crafting timer.
-"""
+# Система фабрики. Відповідає за чергу крафту, таймери та виробництво blueprints і components.
 from __future__ import annotations
 from dataclasses import dataclass, field
 from systems.resources import ResourceSystem, Resource
 
 
-# ── Рецепти ──────────────────────────────────────────────────────────────────
+#Рецепти 
 
 @dataclass(frozen=True)
 class Recipe:
@@ -18,84 +16,86 @@ class Recipe:
     output_count: int = 1
     craft_time:  float = 20.0
     category:    str  = "blueprint"   # blueprint | component | endgame
+    item_inputs: dict[str, int] = field(default_factory=dict)
 
 
 RECIPES: dict[str, Recipe] = {r.id: r for r in [
 
-    # ── Basic blueprints (стартові) ──────────────────────────────────────
+    # Базові blueprints (можуть бути стартовими або знайденими в перших днях)
     Recipe(
-        id="bp_solar", label="Solar Panel Blueprint",
-        description="Enables solar panel construction.",
+        id="bp_solar", label="БЛЮПРИНТ СОНЯЧНОЇ ПАНЕЛІ",  # 
+        description="Дозволяє побудувати сонячну панель.",
         inputs=((Resource.IRON, 8),),
         output_item="bp_solar", craft_time=15.0, category="blueprint",
     ),
     Recipe(
-        id="bp_greenhouse", label="Greenhouse Blueprint",
-        description="Enables greenhouse construction.",
+        id="bp_greenhouse", label="БЛЮПРИНТ ТЕПЛИЦІ",  # 
+        description="Дозволяє побудувати теплицю.",
         inputs=((Resource.IRON, 10), (Resource.SILICON, 4)),
         output_item="bp_greenhouse", craft_time=20.0, category="blueprint",
     ),
     Recipe(
-        id="bp_extractor", label="Extractor Blueprint",
-        description="Enables extractor construction.",
+        id="bp_extractor", label="БЛЮПРИНТ БУРА",  # 
+        description="Дозволяє побудувати бур.",
         inputs=((Resource.IRON, 12),),
         output_item="bp_extractor", craft_time=18.0, category="blueprint",
     ),
 
-    # ── Advanced blueprints ───────────────────────────────────────────────
+    # Просунуті blueprints (зазвичай знаходяться в середині гри, вимагають більше ресурсів)
     Recipe(
-        id="bp_storage", label="Storage Blueprint",
-        description="Enables storage construction.",
+        id="bp_storage", label="БЛЮПРИНТ СКЛАДУ",  
+        description="Дозволяє побудувати склад.",
         inputs=((Resource.IRON, 15), (Resource.SILICON, 5)),
         output_item="bp_storage", craft_time=25.0, category="blueprint",
     ),
     Recipe(
-        id="bp_laboratory", label="Laboratory Blueprint",
-        description="Enables laboratory construction.",
+        id="bp_laboratory", label="БЛЮПРИНТ ЛАБОРАТОРІЇ",
+        description="Дозволяє побудувати лабораторію.",
         inputs=((Resource.IRON, 20), (Resource.SILICON, 15)),
         output_item="bp_laboratory", craft_time=35.0, category="blueprint",
     ),
 
-    # ── Components ────────────────────────────────────────────────────────
+    # Компоненти для кінцевих будівель (можуть бути виготовлені на фабриці)
     Recipe(
-        id="metal_parts", label="Metal Parts",
-        description="Refined iron parts for advanced construction.",
+        id="metal_parts", label="Металеві деталі",
+        description="Очищені залізні деталі для просунутої побудови.",
         inputs=((Resource.IRON, 20),),
         output_item="metal_parts", output_count=3,
         craft_time=12.0, category="component",
     ),
     Recipe(
-        id="circuit_boards", label="Circuit Boards",
-        description="Silicon+iron electronics.",
+        id="circuit_boards", label="Мікросхеми",
+        description="Електроніка на основі сіліцію та заліза.",
         inputs=((Resource.SILICON, 15), (Resource.IRON, 10)),
         output_item="circuit_boards", output_count=2,
         craft_time=18.0, category="component",
     ),
 
-    # ── Endgame ───────────────────────────────────────────────────────────
+    # Кінцева гра
     Recipe(
-        id="bp_battery", label="Battery Blueprint",
-        description="Enables battery array construction.",
+        id="bp_battery", label="БЛЮПРИНТ БАТАРЕЇ",
+        description="Дозволяє побудувати батарею.",
         inputs=((Resource.IRON, 15), (Resource.SILICON, 10)),
         output_item="bp_battery", craft_time=20.0, category="blueprint",
     ),
     Recipe(
-        id="bp_reactor", label="Reactor Blueprint",
-        description="Enables nuclear reactor construction.",
+        id="bp_reactor", label="БЛЮПРИНТ РЕАКТОРА",
+        description="Дозволяє побудувати ядерний реактор (АЕС).",
         inputs=((Resource.IRON, 40), (Resource.SILICON, 25), (Resource.URANIUM, 5)),
         output_item="bp_reactor", craft_time=50.0, category="blueprint",
     ),
     Recipe(
-        id="bp_battery", label="Battery Array Blueprint",
-        description="Enables battery array construction.",
-        inputs=((Resource.IRON, 15), (Resource.SILICON, 10)),
-        output_item="bp_battery", craft_time=20.0, category="blueprint",
-    ),
-    Recipe(
-        id="jammer_component", label="Jammer Component",
-        description="Core component for the Signal Jammer.",
+        id="jammer_component", label="КОМПОНЕНТ ДЛЯ ГЛУШИЛКИ",
+        description="Головний компонент для глушилки.",
         inputs=((Resource.URANIUM, 5), (Resource.SILICON, 20), (Resource.IRON, 15)),
         output_item="jammer_component", craft_time=60.0, category="endgame",
+    ),
+    Recipe(
+        id="bp_jammer", label="БЛЮПРИНТ ГЛУШИЛКИ",
+        description="Дозволяє побудувати глушилку.",
+        inputs=(),
+        item_inputs={"metal_parts": 3, "circuit_boards": 2, "jammer_component": 2},
+        output_item="bp_jammer", craft_time=80.0, category="endgame",
     ),
 ]}
 
@@ -104,7 +104,7 @@ RECIPE_ORDER = [
     "bp_solar", "bp_greenhouse", "bp_extractor",
     "bp_storage", "bp_laboratory", "bp_battery", "bp_reactor",
     "metal_parts", "circuit_boards",
-    "jammer_component",
+    "jammer_component", "bp_jammer"
 ]
 
 # Будівлі що вимагають blueprint
@@ -119,14 +119,13 @@ BUILDING_REQUIRES_BP: dict[str, str | None] = {
     "laboratory": "bp_laboratory",
     "battery":    "bp_battery",
     "reactor":    "bp_reactor",
-    "jammer":     "jammer_component",
+    "jammer":   "bp_jammer",
 }
 
 
-# ── Blueprint Inventory ───────────────────────────────────────────────────────
+# ІНВЕНТАР BLUEPRINTS
 
 class BlueprintInventory:
-    """Зберігає blueprints і components що були виготовлені."""
 
     def __init__(self):
         self._items: dict[str, int] = {}
@@ -162,12 +161,10 @@ class BlueprintInventory:
         return self.consume(required)
 
 
-# ── Factory Manager ───────────────────────────────────────────────────────────
+# Менеджер фабрики, що керує чергою крафту, таймерами та виробництвом blueprints і components.
 
 @dataclass
 class FactoryManager:
-    """Керує чергою крафту для всіх фабрик."""
-
     _queue:       list[str]  = field(default_factory=list)   # recipe ids
     _timer:       float      = 0.0
     _busy:        bool       = False
@@ -198,27 +195,36 @@ class FactoryManager:
     def time_left(self) -> float:
         return self._timer if self._busy else 0.0
 
-    def can_craft(self, recipe_id: str, resources: ResourceSystem) -> bool:
+    def can_craft(self, recipe_id: str, resources: ResourceSystem,
+                blueprint_inv: BlueprintInventory) -> bool:
         recipe = RECIPES.get(recipe_id)
         if not recipe:
             return False
-        return all(resources.amount(r) >= amt for r, amt in recipe.inputs)
+        if not all(resources.amount(r) >= amt for r, amt in recipe.inputs):
+            return False
+        for item, count in recipe.item_inputs.items():
+            if not blueprint_inv.has(item, count):
+               return False
+        return True
 
-    def enqueue(self, recipe_id: str, resources: ResourceSystem) -> bool:
-        """Додає рецепт у чергу якщо є ресурси. Знімає ресурси одразу."""
+    def enqueue(self, recipe_id: str, resources: ResourceSystem,
+                blueprint_inv: BlueprintInventory) -> bool:
         recipe = RECIPES.get(recipe_id)
         if not recipe:
             return False
         costs = {r: amt for r, amt in recipe.inputs}
         if not resources.consume_many(costs):
             return False
+        for item, count in recipe.item_inputs.items():
+            if not blueprint_inv.consume(item, count):
+                # повертаємо вже сплачені ресурси? для спрощення - ні
+                return False
         self._queue.append(recipe_id)
         if not self._busy:
             self._start_next()
         return True
 
     def remove_from_queue(self, index: int):
-        """Видаляє елемент з черги (ресурси НЕ повертаються — вже списані)."""
         if 0 <= index < len(self._queue):
             self._queue.pop(index)
 

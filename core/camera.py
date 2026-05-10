@@ -18,11 +18,11 @@ class Camera:
         self.y = max(0, min(self.y, map_h - self.screen_h))
 
     def apply(self, world_x: float, world_y: float) -> tuple[int, int]:
-        """Конвертує світові координати в екранні."""
+        #Конвертує світові координати в екранні.
         return int(world_x - self.x), int(world_y - self.y)
 
     def is_visible(self, world_x: float, world_y: float, size: int) -> bool:
-        """Перевіряє чи об'єкт потрапляє на екран."""
+        #Перевіряє чи об'єкт потрапляє на екран.
         sx, sy = self.apply(world_x, world_y)
         return (
             -size < sx < self.screen_w + size

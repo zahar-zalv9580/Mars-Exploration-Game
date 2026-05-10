@@ -1,18 +1,4 @@
-"""
-PopulationManager — популяція як ресурс/workforce.
-
-population       — поточна кількість людей
-capacity         — максимум (залежить від Habitat)
-workers_total    — всього робітників (= population)
-workers_used     — зайнято будівлями
-workers_free     — вільні
-
-Кожен тік:
-  - споживає food/water/energy на людину
-  - якщо бракує — смерть колоністів
-  - кожні ARRIVAL_INTERVAL днів — прибуває транспорт (якщо є місце/ресурси)
-"""
-from __future__ import annotations
+# Керування населенням колонії: кількість, споживання ресурсів, робітники, прибуття транспорту.
 from dataclasses import dataclass, field
 from systems.resources import ResourceSystem, Resource
 
@@ -44,6 +30,8 @@ BUILDING_WORKERS: dict[str, int] = {
     "storage":    0,
     "factory":    3,
     "laboratory": 2,
+    "battery":    1,
+    "reactor":    4,
     "jammer":     6,
 }
 
@@ -57,6 +45,8 @@ BUILDING_MIN_POP: dict[str, int] = {
     "storage":    0,
     "factory":    5,
     "laboratory": 8,
+    "battery":    10,
+    "reactor":    15,
     "jammer":     20,
 }
 
@@ -66,14 +56,12 @@ class PopulationManager:
     population:    int   = 4      # стартова колонія
     capacity:      int   = 5      # базовий ліміт (перший Habitat вже є)
     _habitat_count: int  = 1
-
     _workers_used:  int  = 0
     _arrival_timer: float = 0.0
 
     # Логи подій (для UI)
     events: list[str] = field(default_factory=list)
-
-    # ---------------------------------------------------------------- query
+    new_events: list[str] = field(default_factory=list)
 
     @property
     def workers_free(self) -> int:
@@ -93,7 +81,7 @@ class PopulationManager:
     def workers_needed(self, building_type_value: str) -> int:
         return BUILDING_WORKERS.get(building_type_value, 0)
 
-    # ---------------------------------------------------------------- habitat
+    # Хабітат
 
     def add_habitat(self, count: int = 1):
         self._habitat_count += count
@@ -102,16 +90,12 @@ class PopulationManager:
     def remove_habitat(self, count: int = 1):
         self._habitat_count = max(0, self._habitat_count - count)
         self.capacity = BASE_CAPACITY + self._habitat_count * HABITAT_CAPACITY
-        # Люди не зникають миттєво — але нові не прибувають
+        # Люди не зникають миттєво - але нові не прибувають
         self.population = min(self.population, self.capacity)
 
-    # ---------------------------------------------------------------- workers
+    # Працівники
 
     def assign_workers(self, buildings: dict) -> dict[tuple, bool]:
-        """
-        Розподіляє workers по будівлях (greedy — порядок розміщення).
-        Повертає dict {(tx,ty): has_workers}.
-        """
         available = self.population
         result    = {}
         used      = 0
@@ -126,7 +110,7 @@ class PopulationManager:
         self._workers_used = used
         return result
 
-    # ---------------------------------------------------------------- tick
+    #Тік
 
     def tick(self, resources: ResourceSystem, dt: float):
         if self.population <= 0:
@@ -143,7 +127,7 @@ class PopulationManager:
         if shortage:
             self.population = max(0, self.population - 1)
             cause = "starvation" if not resources.consume(Resource.FOOD, 0) else "resource shortage"
-            self._log(f"COLONIST LOST — {cause.upper()}")
+            self._log(f"ВТРАТА КОЛОНІСТІВ - {cause.upper()}")
 
         # Прибуття транспорту
         self._arrival_timer += dt
@@ -161,12 +145,13 @@ class PopulationManager:
         has_energy = resources.amount(Resource.ENERGY) >= count * 2
         if has_food and has_energy:
             self.population += count
-            self._log(f"INCOMING SURVIVAL TRANSPORT — +{count} COLONISTS")
+            self._log(f"ПРИБУТТЯ ТРАНСПОРТУ - +{count} КОЛОНІСТІВ")
         else:
-            self._log("TRANSPORT DIVERTED — INSUFFICIENT RESOURCES")
+            self._log("ТРАНСПОРТ ВІДХИЛЕНО - НЕДОСТАТНЬО РЕСУРСІВ")
 
     def _log(self, msg: str):
         self.events.append(msg)
+        self.new_events.append(msg)   
         if len(self.events) > 20:
             self.events.pop(0)
-        print(f"[Population] {msg}")
+        print(f"[Популяція] {msg}")

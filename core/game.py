@@ -1,4 +1,5 @@
 import pygame
+from core import audio
 from core.camera import Camera
 from world.world import World
 from entities.rover import Rover
@@ -18,9 +19,8 @@ from ui.laboratory_ui import LaboratoryUI
 from ui.factory_ui import FactoryUI
 from ui.weather_fx import WeatherFX
 from ui.jammer_ui import JammerUI
-from systems.day_cycle import DayCycle
 
-# Стани гри
+#Усі стани гри
 STATE_MAIN_MENU = "main_menu"
 STATE_GAME      = "game"
 STATE_PAUSE     = "pause"
@@ -35,14 +35,15 @@ class Game:
         self.screen  = screen
         self.running = True
         self.state   = STATE_MAIN_MENU
+        self.music_paused = False
 
-        # Меню — завантажується одразу
+        # Меню завантажується одразу
         self._main_menu  = MainMenu(screen, has_save=save_exists())
         self._pause_menu: PauseMenu | None         = None
         self._game_over:  GameOverScreen | None    = None
         self._ending:     EndingScreen | None      = None
 
-        # Ігрові об'єкти — створюються при старті гри
+        # Ігрові об'єкти, створюються при старті гри
         self.world:     World | None           = None
         self.rover:     Rover | None           = None
         self.camera:    Camera | None          = None
@@ -51,18 +52,18 @@ class Game:
         self.ui:        UI | None              = None
         self._tick_timer = 0.0
 
-    # ---------------------------------------------------------------- start
+    # стартова частина!!!!!!!!!!!
 
     def _start_game(self):
         sw, sh = self.screen.get_size()
-        print("Loading world...")
+        print("Завантаження світу...")              #Чимось нагадує "Loading world..." з Minecraft =)
         self.world = World(
             width=128, height=64,
             height_path="assets/maps/height.png",
             biome_path= "assets/maps/biome.png",
             map_path=   "assets/maps/map.png",
         )
-        print("World loaded.")
+        print("Світ завантажено.")
 
         cx = self.world.width  * self.world.TILE_SIZE // 2
         cy = self.world.height * self.world.TILE_SIZE // 2
@@ -94,7 +95,7 @@ class Game:
         from systems.crisis import Modifiers
         self._mods = Modifiers()
 
-        # Тестові ресурси
+        # Початкові ресурси
         self.resources.set(Resource.ENERGY,  120.0)
         self.resources.set(Resource.IRON,    100.0)
         self.resources.set(Resource.WATER,    15.0)
@@ -104,6 +105,7 @@ class Game:
         self.resources.set(Resource.FOOD,     90.0)
 
         self.state = STATE_GAME
+        audio.play_game_music()
 
     def _go_game_over(self, reason: str = "hub"):
         self._game_over = GameOverScreen(self.screen, reason)
@@ -113,17 +115,22 @@ class Game:
         discovered = list(self.lab._discovered) if self.lab else []
         self._ending = EndingScreen(self.screen, ending, discovered_logs=discovered)
         self.state = STATE_ENDING
+        audio.stop_music(fadeout_ms=2000)
 
     def _go_main_menu(self):
         self._main_menu = MainMenu(self.screen, has_save=save_exists())
         self.state = STATE_MAIN_MENU
+        audio.play_menu_music()
 
-    # ---------------------------------------------------------------- events
+    # ПОДІЇ ГРИ!!!!!!!!!!
 
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            if event.type == pygame.USEREVENT + 1:  #подія закінчення музики
+                if self.state == STATE_GAME:
+                    audio.play_next_game_track()
 
             # ── Головне меню ──
             if self.state == STATE_MAIN_MENU:
@@ -141,10 +148,12 @@ class Game:
                 action = self._pause_menu.handle_event(event)
                 if action == "resume":
                     self.state = STATE_GAME
+                    audio.set_music_volume(1.0)
+                    audio.set_sfx_volume(1.0)
                 elif action == "save":
                     ok = save_game(self)
                     self.ui.hud.push_message(
-                        '// GAME SAVED //' if ok else '// SAVE FAILED //'
+                        '// ГРА ЗБЕРЕЖЕНА //' if ok else '// ПОМИЛКА ПРИ ЗБЕРЕЖЕННІ //'
                     )
                     self.state = STATE_GAME
                 elif action == "main_menu":
@@ -180,9 +189,11 @@ class Game:
                     self.ui.inventory.deselect()
                 else:
                     self.state = STATE_PAUSE
+                    audio.set_music_volume(0.3)
+                    audio.set_sfx_volume(0.3)
 
             elif event.key == pygame.K_h:
-                self.world.toggle_overlay()
+                self.world.cycle_overlay()
             elif event.key == pygame.K_q:
                 rover_tx = int(self.rover.x // self.world.TILE_SIZE)
                 rover_ty = int(self.rover.y // self.world.TILE_SIZE)
@@ -193,14 +204,14 @@ class Game:
                 for (tx, ty), b in self.buildings._buildings.items():
                     if b.type.value == 'factory' and max(abs(tx-rover_tx), abs(ty-rover_ty)) <= 2:
                         self._factory_ui.toggle()
-                        break
+                        return
             elif event.key == pygame.K_l:
                 rover_tx = int(self.rover.x // self.world.TILE_SIZE)
                 rover_ty = int(self.rover.y // self.world.TILE_SIZE)
                 for (tx, ty), b in self.buildings._buildings.items():
                     if b.type.value == 'laboratory' and max(abs(tx-rover_tx), abs(ty-rover_ty)) <= 2:
                         self._lab_ui.toggle()
-                        break
+                        return
             elif event.key == pygame.K_j:
                 rover_tx = int(self.rover.x // self.world.TILE_SIZE)
                 rover_ty = int(self.rover.y // self.world.TILE_SIZE)
@@ -211,6 +222,7 @@ class Game:
                         break
                 if has_jammer:
                     self._jammer_ui.toggle()
+                    return
             elif event.key == pygame.K_r:
                 # Collect fragment
                 rover_tx = int(self.rover.x // self.world.TILE_SIZE)
@@ -218,8 +230,9 @@ class Game:
                 frag = self.fragments.try_collect(rover_tx, rover_ty)
                 if frag:
                     self.lab.add_fragment(frag.rarity)
+                    audio.play_sound('collect')
                     self.ui.hud.push_message(
-                        f'// SIGNAL FRAGMENT RECOVERED: {frag.label} //'
+                        f'// ФРАГМЕНТ ВІДНОВЛЕНО: {frag.label} //'
                     )
 
             else:
@@ -229,13 +242,7 @@ class Game:
                 elif bt is None and self.buildings.is_placing:
                     self.buildings.cancel_placement()
 
-            # DEV: тест кінцівок (видали пізніше)
-            if event.key == pygame.K_F1:
-                self._go_game_over("hub")
-            if event.key == pygame.K_F2:
-                self._go_ending("good")
-            if event.key == pygame.K_F3:
-                self._go_ending("secret")
+
 
         # Lab UI
         if self._lab_ui.visible:
@@ -269,7 +276,7 @@ class Game:
                         self.population.workers_free
                     )
                     if placed:
-                        # Якщо поставили Habitat — збільшуємо capacity
+                        # Якщо поставили Habitat то збільшуємо capacity
                         from entities.building import BuildingType
                         if self.ui.inventory.selected_type == BuildingType.HABITAT:
                             self.population.add_habitat()
@@ -292,7 +299,7 @@ class Game:
                 mx, my, self.world, self.camera, rover_tx, rover_ty
             )
 
-    # ---------------------------------------------------------------- update
+    # ОНОВЛЕННЯ!!!!!
 
     def update(self, dt: float):
         if self.state == STATE_MAIN_MENU:
@@ -321,7 +328,7 @@ class Game:
                     b.type.value == 'jammer' and b.is_active
                     for b in self.buildings._buildings.values()
                 )
-                all_logs = True  # TODO: перевірка логів лабораторії
+                all_logs = True  
                 all_logs = self.lab.secret_ending_unlocked()
                 if has_jammer and all_logs:
                     self._go_ending('secret')
@@ -331,7 +338,7 @@ class Game:
                     self._go_ending('bad')
                 return
 
-            # Програш якщо нема Hub
+            # Програш якщо нема Hub (тіпа купола)
             hub_alive = any(
                 b.type.value == 'hub'
                 for b in self.buildings._buildings.values()
@@ -345,7 +352,7 @@ class Game:
                 self._go_game_over('food')
                 return
 
-            # Кризи
+            #Кризи та погодка
             self._mods = self.crisis.tick(
                 dt, self.day.phase, self.day.event_rate,
                 self.population, self.resources
@@ -354,7 +361,7 @@ class Game:
             for msg in self.crisis.new_messages:
                 self.ui.hud.push_message(msg)
 
-            # Лор
+            # Лор 😱
             self.lab.check_day_unlocks(self.day.day)
             has_lab = any(
                 b.type.value == 'laboratory' and b.is_active
@@ -376,8 +383,9 @@ class Game:
             self.rover.speed_mod_external = self._mods.rover_speed
 
             # Повідомлення від популяції
-            for msg in self.population.events[-1:]:
+            for msg in self.population.new_events:
                 self.ui.hud.push_message(msg)
+            self.population.new_events.clear()
 
             self._tick_timer += dt
             if self._tick_timer >= TICK_RATE:
@@ -391,7 +399,7 @@ class Game:
                 self.population.tick(self.resources, TICK_RATE)
                 # Factory tick
                 has_factory = any(
-                    b.type.value == 'factory' and b.is_active
+                    b.type.value == 'factory'
                     for b in self.buildings._buildings.values()
                 )
                 if has_factory:
@@ -400,10 +408,16 @@ class Game:
                         has_power=self.resources.amount(__import__('systems.resources', fromlist=['Resource']).Resource.ENERGY) > 0,
                         has_workers=True
                     )
-                # Jammer activation processing
+                # Процессінг глушилки
+                jammer_bldg = None
+                if self._jammer_ui.visible:
+                    for b in self.buildings._buildings.values():
+                        if b.type.value == 'jammer' and b.is_active:
+                            jammer_bldg = b
+                            break
                 if self._jammer_ui.tick(
                     TICK_RATE, self.resources, self.crisis,
-                    self.buildings, self.lab
+                    self.buildings, jammer_bldg
                 ):
                     if self.lab.secret_ending_unlocked():
                         self._go_ending('secret')
@@ -419,7 +433,7 @@ class Game:
         elif self.state == STATE_ENDING:
             self._ending.update(dt)
 
-    # ---------------------------------------------------------------- render
+    # РЕНДЕРИНГ!!!!!!!!!
 
     def render(self):
         if self.state == STATE_MAIN_MENU:
@@ -447,7 +461,7 @@ class Game:
         self.rover.render(self.screen, self.camera)
         self._render_debug_coords()
         self._render_fragment_hint()
-        # Рендер UI: Hud, панелі ресурсів, популяції, інвентар
+        # Рендер UI: Hud, панелі ресурсів, популяції, інвентар і всякі там штуки
         self.ui.render(
             res=self.resources,
             pop=self.population,
@@ -476,19 +490,21 @@ class Game:
         rover_ty = int(self.rover.y // self.world.TILE_SIZE)
         frag = self.fragments.nearby_fragment(rover_tx, rover_ty)
         if frag:
-            from ui import fonts
-            sw, sh = self.screen.get_size()
-            hint = fonts.get(11, bold=True).render(
-                f'[ R ] RECOVER {frag.label}', True, frag.color
-            )
-            self.screen.blit(hint, (
-                sw // 2 - hint.get_width() // 2,
-                sh // 2 + 40
-            ))
+            tile = self.world.get_tile(frag.tx, frag.ty)
+            if tile and tile.is_explored:
+                from ui import fonts
+                sw, sh = self.screen.get_size()
+                hint = fonts.get(11, bold=True).render(
+                    f'[ R ] ВЗЯТИ {frag.label}', True, frag.color
+                )
+                self.screen.blit(hint, (
+                    sw // 2 - hint.get_width() // 2,
+                    sh // 2 + 40
+                ))
 
     def _render_debug_coords(self):
         tx = int(self.rover.x // self.world.TILE_SIZE)
         ty = int(self.rover.y // self.world.TILE_SIZE)
         font = pygame.font.SysFont("consolas", 13)
-        text = font.render(f"Rover tile: ({tx}, {ty})", True, (160, 160, 140))
+        text = font.render(f"Координати роверу: ({tx}, {ty})", True, (160, 160, 140))
         self.screen.blit(text, (10, 52))

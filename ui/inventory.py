@@ -1,9 +1,4 @@
-"""
-Inventory system:
-  - Bottom bar: показує тільки blueprints що є в BlueprintInventory (динамічно)
-  - E key: розширений інвентар (всі items + компоненти)
-"""
-from __future__ import annotations
+# inventory.py — нижній бар з вибором будівель + розширений інвентар (E)
 import pygame
 from ui import fonts
 from systems.factory import BlueprintInventory, RECIPES, BUILDING_REQUIRES_BP
@@ -17,8 +12,8 @@ MARGIN_BOT   = 16
 ALL_ITEMS = [
     # Blueprints
     "bp_solar", "bp_greenhouse", "bp_extractor",
-    "bp_storage", "bp_laboratory",
-    # Components
+    "bp_storage", "bp_laboratory", "bp_battery", "bp_reactor",
+    "bp_jammer",
     "metal_parts", "circuit_boards", "jammer_component",
 ]
 
@@ -28,6 +23,9 @@ ITEM_LABELS = {
     "bp_extractor":    "Extractor BP",
     "bp_storage":      "Storage BP",
     "bp_laboratory":   "Laboratory BP",
+    "bp_battery":      "Battery BP",
+    "bp_reactor":      "Reactor BP",
+    "bp_jammer":       "Jammer BP",
     "metal_parts":     "Metal Parts",
     "circuit_boards":  "Circuit Boards",
     "jammer_component":"Jammer Comp.",
@@ -39,6 +37,9 @@ ITEM_COLORS = {
     "bp_extractor":    (180, 120, 60),
     "bp_storage":      (160, 140, 100),
     "bp_laboratory":   (120, 180, 220),
+    "bp_battery":      (255, 220, 50),
+    "bp_reactor":      (220, 120, 50),
+    "bp_jammer":       (180, 80,  220),
     "metal_parts":     (180, 130, 90),
     "circuit_boards":  (140, 200, 140),
     "jammer_component":(180, 80,  220),
@@ -51,6 +52,9 @@ BP_TO_BUILDING: dict[str, BuildingType] = {
     "bp_extractor":  BuildingType.EXTRACTOR,
     "bp_storage":    BuildingType.STORAGE,
     "bp_laboratory": BuildingType.LABORATORY,
+    "bp_battery":    BuildingType.BATTERY,
+    "bp_reactor":    BuildingType.REACTOR,
+    "bp_jammer":     BuildingType.JAMMER,
 }
 
 # Будівлі без blueprint (завжди доступні в нижньому барі)
@@ -58,13 +62,10 @@ FREE_BUILDINGS = [
     BuildingType.HUB,
     BuildingType.HABITAT,
     BuildingType.FACTORY,
-    BuildingType.JAMMER,
 ]
 
 
 class Inventory:
-    """Bottom bar + розширений інвентар (E)."""
-
     BG_COLOR      = (12, 6, 3, 210)
     BORDER_COLOR  = (100, 50, 15)
     SELECT_COLOR  = (220, 150, 40)
@@ -80,19 +81,15 @@ class Inventory:
     def load_icons(self, icons: dict[BuildingType, pygame.Surface]):
         self._icons = icons
 
-    # ---------------------------------------------------------------- slots
+    # Повертає список (label, BuildingType | None, icon_key, hotkey_str, count)
 
     def _active_slots(self, bp_inv: BlueprintInventory) -> list[tuple]:
-        """
-        Повертає список (label, BuildingType | None, icon_key, hotkey_str, count)
-        для нижнього бару — тільки доступні.
-        """
         slots = []
         idx = 1
 
         # Будівлі без blueprint
         for bt in FREE_BUILDINGS:
-            if bt == BuildingType.JAMMER and not bp_inv.has("jammer_component"):
+            if bt == BuildingType.JAMMER and not bp_inv.has("bp_jammer"):
                 continue
             slots.append((bt.value, bt, bt, str(idx), 0))
             idx += 1
@@ -148,7 +145,7 @@ class Inventory:
     def expanded_open(self) -> bool:
         return self._expanded
 
-    # ---------------------------------------------------------------- render
+    #Рендер нижнього бару та розширеного інвентаря (якщо відкритий)
 
     def render(self, screen: pygame.Surface, bp_inv: BlueprintInventory):
         slots = self._active_slots(bp_inv)
@@ -202,7 +199,7 @@ class Inventory:
         screen.blit(lbl, (x + (SLOT_SIZE - lbl.get_width()) // 2,
                           y + SLOT_SIZE + 2))
 
-    # ---------------------------------------------------------------- expanded
+    #Розширений інвентар (E) — показує всі blueprints + компоненти, що є в BlueprintInventory
 
     def _render_expanded(self, screen: pygame.Surface, bp_inv: BlueprintInventory):
         sw, sh = screen.get_size()
@@ -274,7 +271,7 @@ class Inventory:
         hint = fonts.get(9).render("E — закрити", True, (80, 60, 40))
         screen.blit(hint, (px + W - hint.get_width() - 10, py + H - 16))
 
-    # ---------------------------------------------------------------- private
+    # Вибір/зняття вибору будівлі при кліку або хоткею
 
     def _select(self, bt: BuildingType) -> BuildingType | None:
         if self._selected_bt == bt:

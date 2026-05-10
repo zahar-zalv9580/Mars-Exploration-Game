@@ -1,4 +1,3 @@
-from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -59,6 +58,7 @@ class ResourceSystem:
     _amounts:       dict[Resource, float] = field(default_factory=dict)
     _capacity:      dict[Resource, float] = field(default_factory=dict)
     _storage_count: int = 0
+    _energy_capacity_bonus: float = 0
 
     # Дельти за останній тік (для відображення ±)
     _delta:  dict[Resource, float] = field(default_factory=dict)
@@ -70,8 +70,8 @@ class ResourceSystem:
             self._capacity[r] = BASE_CAPACITY[r]
             self._delta[r]    = 0.0
             self._prev[r]     = 0.0
+        self._energy_capacity_bonus = 0
 
-    # ---------------------------------------------------------------- query
 
     def amount(self, r: Resource) -> float:
         return self._amounts[r]
@@ -90,7 +90,7 @@ class ResourceSystem:
     def can_afford(self, costs: dict[Resource, float]) -> bool:
         return all(self._amounts[r] >= v for r, v in costs.items())
 
-    # ---------------------------------------------------------------- modify
+    #Зміна кількості ресурсів
 
     def add(self, r: Resource, amount: float) -> float:
         space = self._capacity[r] - self._amounts[r]
@@ -114,7 +114,7 @@ class ResourceSystem:
     def set(self, r: Resource, value: float):
         self._amounts[r] = max(0.0, min(value, self._capacity[r]))
 
-    # ---------------------------------------------------------------- storage
+    #Склад для зберігання ресурсів (збільшує місткість)
 
     def add_storage(self, count: int = 1):
         self._storage_count += count
@@ -129,32 +129,35 @@ class ResourceSystem:
     def _recalc_capacity(self):
         for r in Resource:
             self._capacity[r] = BASE_CAPACITY[r] + STORAGE_BONUS[r] * self._storage_count
+        self._capacity[Resource.ENERGY] += self._energy_capacity_bonus
 
-    # ---------------------------------------------------------------- delta tracking
+    def add_energy_capacity(self, amount: float = 100.0):
+        self._energy_capacity_bonus += amount
+        self._recalc_capacity()
+        # обмежити поточну кількість енергії новою місткістю
+        self._amounts[Resource.ENERGY] = min(self._amounts[Resource.ENERGY], self._capacity[Resource.ENERGY])
+
+    # Дельти та тік
 
     def snapshot(self):
-        """Викликати перед тіком."""
         for r in Resource:
             self._prev[r] = self._amounts[r]
 
     def calc_delta(self):
-        """Викликати після тіку."""
         for r in Resource:
             self._delta[r] = self._amounts[r] - self._prev[r]
 
-    # ---------------------------------------------------------------- extractor output
+    #Виробка ресурсів буром
 
     @staticmethod
     def extractor_output(tile_res_name: str, richness: int, dt: float) -> tuple[Resource, float]:
-        """Розраховує виробку екстрактора на клітинці."""
         base    = EXTRACTOR_BASE.get(tile_res_name, 1.0)
         res     = TILE_RESOURCE_MAP[tile_res_name]
         amount  = base * richness * dt
         return res, amount
 
-    # ---------------------------------------------------------------- solar output
+    #Виробка сонячної панелі
 
     @staticmethod
     def solar_output(solar_modifier: float, dt: float) -> float:
-        """Виробка сонячної панелі залежно від висоти тайлу."""
         return SOLAR_BASE_OUTPUT * solar_modifier * dt

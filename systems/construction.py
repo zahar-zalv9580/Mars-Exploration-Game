@@ -1,12 +1,6 @@
-"""
-Система часу будівництва.
-
-Базовий час залежить від типу будівлі.
-Модифікатор від популяції: більше вільних workers = швидше.
-  time_modifier = 1.0 / (1.0 + free_workers * 0.1)
-  тобто 10 вільних workers = в 2 рази швидше, але не більше ніж x5.
-"""
-from __future__ import annotations
+#   Модифікатор від популяції: більше вільних workers = швидше.
+#  time_modifier = 1.0 / (1.0 + free_workers * 0.1)
+#  тобто 10 вільних workers = в 2 рази швидше, але не більше ніж x5.
 from dataclasses import dataclass, field
 from entities.building import BuildingType, BuildingState, Building
 
@@ -20,6 +14,8 @@ BASE_BUILD_TIME: dict[BuildingType, float] = {
     BuildingType.STORAGE:    15.0,
     BuildingType.FACTORY:    40.0,
     BuildingType.LABORATORY: 35.0,
+    BuildingType.BATTERY:    30.0,
+    BuildingType.REACTOR:    60.0,
     BuildingType.JAMMER:     120.0,
 }
 
@@ -28,7 +24,7 @@ MIN_TIME_MOD = 0.2   # максимальне прискорення x5
 
 @dataclass
 class ConstructionQueue:
-    """Зберігає будівлі що будуються і відстежує прогрес."""
+# зберігає інформацію про будівлі, що будуються, і їх прогрес
 
     _queue: dict[tuple[int,int], float] = field(default_factory=dict)
     # (tx, ty) -> залишилось секунд
@@ -44,7 +40,6 @@ class ConstructionQueue:
         self._queue[(building.tx, building.ty)] = time
 
     def tick(self, buildings: dict, dt: float) -> list[Building]:
-        """Оновлює прогрес. Повертає список щойно добудованих будівель."""
         finished = []
         for key in list(self._queue):
             self._queue[key] -= dt
@@ -57,7 +52,6 @@ class ConstructionQueue:
         return finished
 
     def progress(self, tx: int, ty: int, building_type: BuildingType) -> float | None:
-        """Прогрес 0.0-1.0, None якщо не будується."""
         remaining = self._queue.get((tx, ty))
         if remaining is None:
             return None

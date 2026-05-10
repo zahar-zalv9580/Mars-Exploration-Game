@@ -1,4 +1,3 @@
-"""Централізоване завантаження шрифтів. Імпортуй звідси скрізь."""
 import pygame
 
 FONT_PATH = "assets/fonts/Minecraft_1_1.ttf"

@@ -1,8 +1,4 @@
-"""
-Crisis & Weather system.
-Events: Dust Storm, Cold Snap, Solar Flare, Radiation Wave, Signal Interference
-Colony crises: Power Failure, Food Shortage, Water Failure
-"""
+# Система кризових подій: погода, радіація, перешкоди.
 from __future__ import annotations
 import random
 import math
@@ -22,7 +18,7 @@ class EventType(Enum):
     OBSERVER_PING        = auto()
 
 
-# Іконки для HUD (emoji-стиль текст)
+# Іконки для HUD, але воно трохи не працює...
 EVENT_ICON: dict[EventType, str] = {
     EventType.DUST_STORM:          "🌪",
     EventType.COLD_SNAP:           "❄",
@@ -34,13 +30,13 @@ EVENT_ICON: dict[EventType, str] = {
 }
 
 EVENT_LABEL: dict[EventType, str] = {
-    EventType.DUST_STORM:          "DUST STORM",
-    EventType.COLD_SNAP:           "COLD SNAP",
-    EventType.SOLAR_FLARE:         "SOLAR FLARE",
-    EventType.RADIATION_WAVE:      "RADIATION WAVE",
-    EventType.SIGNAL_INTERFERENCE: "SIGNAL INTERFERENCE",
-    EventType.ORBITAL_SHADOW:      "ORBITAL SHADOW",
-    EventType.OBSERVER_PING:       "OBSERVER PING",
+    EventType.DUST_STORM:          "ПИЛОВА БУРЯ",
+    EventType.COLD_SNAP:           "ХОЛОДНА ХВИЛЯ",
+    EventType.SOLAR_FLARE:         "СОНЯЧНИЙ СПАЛАХ",           #SON-ячний спалах 🥀🥀 (вибачте за тік-ток гумор в коментаріях)
+    EventType.RADIATION_WAVE:      "ХВИЛЯ РАДІАЦІЇ",
+    EventType.SIGNAL_INTERFERENCE: "СИГНАЛЬНІ ПЕРЕШКОДИ",
+    EventType.ORBITAL_SHADOW:      "ОРБІТАЛЬНА ТІНЬ",
+    EventType.OBSERVER_PING:       "ПІНГ СПОСТЕРІГАЧІВ",
 }
 
 EVENT_COLOR: dict[EventType, tuple] = {
@@ -66,17 +62,17 @@ EVENT_DURATION: dict[EventType, tuple[float, float]] = {
 
 # Пул подій по фазах
 PHASE_EVENT_POOL: dict[str, list[EventType]] = {
-    "EARLY":    [EventType.DUST_STORM],
-    "EARLY+":   [EventType.DUST_STORM, EventType.COLD_SNAP],
-    "MID":      [EventType.DUST_STORM, EventType.COLD_SNAP,
+    "РАННІЙ":    [EventType.DUST_STORM],
+    "РАННІЙ+":   [EventType.DUST_STORM, EventType.COLD_SNAP],
+    "СЕРЕДИНА":      [EventType.DUST_STORM, EventType.COLD_SNAP,
                  EventType.SOLAR_FLARE, EventType.RADIATION_WAVE],
-    "LATE":     [EventType.DUST_STORM, EventType.COLD_SNAP,
+    "ПІЗНЯ":     [EventType.DUST_STORM, EventType.COLD_SNAP,
                  EventType.SOLAR_FLARE, EventType.RADIATION_WAVE,
                  EventType.SIGNAL_INTERFERENCE],
-    "CRITICAL": [EventType.DUST_STORM, EventType.RADIATION_WAVE,
+    "КРИТИЧНА": [EventType.DUST_STORM, EventType.RADIATION_WAVE,
                  EventType.SIGNAL_INTERFERENCE, EventType.ORBITAL_SHADOW,
                  EventType.OBSERVER_PING],
-    "FINAL":    [EventType.DUST_STORM, EventType.RADIATION_WAVE,
+    "ФІНАЛ":    [EventType.DUST_STORM, EventType.RADIATION_WAVE,
                  EventType.SIGNAL_INTERFERENCE, EventType.ORBITAL_SHADOW,
                  EventType.OBSERVER_PING],
 }
@@ -136,7 +132,6 @@ class ActiveEvent:
 
 @dataclass
 class Modifiers:
-    """Активні модифікатори від подій."""
     solar_efficiency:  float = 1.0
     rover_speed:       float = 1.0
     habitat_energy:    float = 1.0   # множник споживання
@@ -146,8 +141,7 @@ class Modifiers:
     overlay_alpha:     float = 0.0
 
 
-class CrisisManager:
-    """Керує погодними подіями і застосовує модифікатори."""
+class CrisisManager:        # керує активними кризами, їх ефектами та повідомленнями
 
     def __init__(self):
         self._active:  list[ActiveEvent] = []
@@ -155,7 +149,7 @@ class CrisisManager:
         self._rng = random.Random()
         self.new_messages: list[str] = []
 
-    # ---------------------------------------------------------------- tick
+    #ТІК-метод, що оновлює стан криз та повертає поточні модифікатори для систем.
 
     def tick(self, dt: float, phase: str, event_rate: float,
              population, resources) -> Modifiers:
@@ -182,7 +176,7 @@ class CrisisManager:
         mods = self._compute_modifiers(dt, population, resources)
         return mods
 
-    # ---------------------------------------------------------------- events
+    #ПОДІЇ!!!!
 
     def _start_event(self, et: EventType):
         dmin, dmax = EVENT_DURATION[et]
@@ -197,10 +191,10 @@ class CrisisManager:
         return any(ev.type == et for ev in self._active)
 
     def force_event(self, et: EventType):
-        """Для тестування або скриптованих подій."""
+        # Примусово запускає подію (для тестування)
         self._start_event(et)
 
-    # ---------------------------------------------------------------- modifiers
+    #Модифікатори
 
     def _compute_modifiers(self, dt: float, population, resources) -> Modifiers:
         from systems.resources import Resource
@@ -254,7 +248,7 @@ class CrisisManager:
 
         return mods
 
-    # ---------------------------------------------------------------- query
+    # Геттери для UI та систем, щоб знати які події активні і які ефекти застосовувати. (наприклад, HUD може показувати іконки активних подій, а системи можуть перевіряти модифікатори)
 
     @property
     def active_events(self) -> list[ActiveEvent]:
@@ -266,7 +260,6 @@ class CrisisManager:
 
     @property
     def weather_icon(self) -> str:
-        """Іконка для HUD — найважливіша активна подія."""
         priority = [
             EventType.OBSERVER_PING, EventType.ORBITAL_SHADOW,
             EventType.RADIATION_WAVE, EventType.DUST_STORM,
@@ -276,4 +269,4 @@ class CrisisManager:
         for et in priority:
             if self._has_event(et):
                 return EVENT_ICON.get(et, "?")
-        return "☀"   # ясна погода
+        return "☀"  # сонце коли немає подій

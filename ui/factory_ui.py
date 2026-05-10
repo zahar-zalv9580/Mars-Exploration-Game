@@ -1,11 +1,10 @@
-"""
-Factory UI — відкривається при кліку на фабрику поруч з ровером.
-"""
-from __future__ import annotations
+# Factory UI — панель для крафту предметів за рецептами
+# Відкривається клавішею F, показує рецепти та їх вимоги, дозволяє запускати крафт та скасовувати чергу. 
 import pygame
 from ui import fonts
 from systems.factory import FactoryManager, BlueprintInventory, RECIPES, RECIPE_ORDER
 from systems.resources import ResourceSystem, Resource
+from ui.inventory import ITEM_LABELS
 
 # Кольори категорій
 CATEGORY_COLORS = {
@@ -45,7 +44,6 @@ class FactoryUI:
         self._selected  = 0    # індекс у RECIPE_ORDER
         self._scroll    = 0
 
-    # ---------------------------------------------------------------- public
 
     @property
     def visible(self) -> bool:
@@ -66,7 +64,6 @@ class FactoryUI:
         blueprint_inv: BlueprintInventory,
         resources: ResourceSystem,
     ) -> bool:
-        """Повертає True якщо подія поглинута."""
         if not self._visible:
             return False
 
@@ -80,7 +77,7 @@ class FactoryUI:
             px = sw // 2 - W // 2
             py = sh // 2 - H // 2
 
-            # Клік поза панеллю — закрити
+            # Клік поза панеллю - закрити
             if not pygame.Rect(px, py, W, H).collidepoint(mx, my):
                 self.close()
                 return True
@@ -99,7 +96,7 @@ class FactoryUI:
                                      py + H - 52, 160, 36)
             if craft_rect.collidepoint(mx, my):
                 rid = RECIPE_ORDER[self._selected]
-                factory.enqueue(rid, resources)
+                factory.enqueue(rid, resources, blueprint_inv)
                 return True
 
             # Кнопка скасування першого в черзі
@@ -145,7 +142,7 @@ class FactoryUI:
                          (px + RECIPE_W, py + 34),
                          (px + RECIPE_W, py + H), 1)
 
-        # ── Список рецептів (ліво) ────────────────────────────────────────
+        # Список рецептів (ліво) — прокручуваний
         clip = screen.subsurface(pygame.Rect(px + 1, py + 36,
                                              RECIPE_W - 1, H - 38))
         clip_surf = pygame.Surface((RECIPE_W - 1, H - 38), pygame.SRCALPHA)
@@ -157,7 +154,7 @@ class FactoryUI:
                 continue
 
             selected = (i == self._selected)
-            can_craft = factory.can_craft(rid, resources)
+            can_craft = factory.can_craft(rid, resources, blueprint_inv)
             cat_color = CATEGORY_COLORS.get(recipe.category, self.TEXT)
 
             # Фон рядка
@@ -185,11 +182,11 @@ class FactoryUI:
 
         clip.blit(clip_surf, (0, 0))
 
-        # ── Деталі вибраного рецепту (право) ─────────────────────────────
+        #Детальна інформація про вибраний рецепт (праворуч)
         rx = px + RECIPE_W + PADDING
         ry = py + 40
         recipe = RECIPES[RECIPE_ORDER[self._selected]]
-        can_craft = factory.can_craft(RECIPE_ORDER[self._selected], resources)
+        can_craft = factory.can_craft(RECIPE_ORDER[self._selected], resources, blueprint_inv)
 
         # Назва
         name = fonts.get(13, bold=True).render(recipe.label, True, self.TITLE)
@@ -202,7 +199,7 @@ class FactoryUI:
         ry += 20
 
         # Час крафту
-        t = fonts.get(11).render(f"Craft time: {recipe.craft_time:.0f}s",
+        t = fonts.get(11).render(f"Час крафту: {recipe.craft_time:.0f}s",
                                   True, self.TEXT)
         screen.blit(t, (rx, ry))
         ry += 24
@@ -215,12 +212,26 @@ class FactoryUI:
             have = resources.amount(res)
             color = self.CRAFT_OK if have >= amt else self.CRAFT_NO
             line  = fonts.get(11).render(
-                f"  {res.value.capitalize():10s} {int(amt):4d}  (have {int(have)})",
+                f"  {res.value.capitalize():10s} {int(amt):4d}  (має {int(have)})",
                 True, color
             )
             screen.blit(line, (rx, ry))
             ry += 17
-
+        # Item inputs (компоненти)
+        if recipe.item_inputs:
+            item_title = fonts.get(11, bold=True).render("КОМПОНЕНТИ:", True, self.TEXT)
+            screen.blit(item_title, (rx, ry))
+            ry += 18
+            for item_id, needed in recipe.item_inputs.items():
+                have = blueprint_inv.count(item_id)
+                color = self.CRAFT_OK if have >= needed else self.CRAFT_NO
+                label = ITEM_LABELS.get(item_id, item_id)
+                line = fonts.get(11).render(
+                    f"  {label:15s} {needed}  (має {have})",
+                    True, color
+                )
+                screen.blit(line, (rx, ry))
+                ry += 17
         ry += 8
         # Вихід
         out_title = fonts.get(11, bold=True).render("ВИХІД:", True, self.TEXT)
@@ -233,7 +244,7 @@ class FactoryUI:
         screen.blit(out_line, (rx, ry))
         ry += 24
 
-        # ── Поточний крафт ────────────────────────────────────────────────
+        # Показати поточний крафт та чергу
         pygame.draw.line(screen, self.BORDER,
                          (rx, ry), (px + W - PADDING, ry), 1)
         ry += 8
@@ -241,7 +252,7 @@ class FactoryUI:
         if factory.is_busy and factory.current_recipe:
             cur = factory.current_recipe
             now = fonts.get(11, bold=True).render(
-                f"NOW: {cur.label}", True, (160, 200, 80)
+                f"ЗАРАЗ: {cur.label}", True, (160, 200, 80)
             )
             screen.blit(now, (rx, ry))
             ry += 18
@@ -257,12 +268,12 @@ class FactoryUI:
             ry += 14
 
             tl = fonts.get(10).render(
-                f"{factory.time_left:.1f}s left", True, self.DIM
+                f"{factory.time_left:.1f}с залишилося", True, self.DIM
             )
             screen.blit(tl, (rx, ry))
             ry += 18
         else:
-            idle = fonts.get(11).render("СТІЙ — оберіть рецепт і КРАФТ",
+            idle = fonts.get(11).render("Оберіть рецепт і натисніть КРАФТ",
                                          True, self.DIM)
             screen.blit(idle, (rx, ry))
             ry += 20
@@ -270,7 +281,7 @@ class FactoryUI:
         # Черга
         if factory.queue:
             q_title = fonts.get(10).render(
-                f"QUEUE ({len(factory.queue)}):", True, self.DIM
+                f"Черга ({len(factory.queue)}):", True, self.DIM
             )
             screen.blit(q_title, (rx, ry))
             ry += 16
@@ -299,5 +310,5 @@ class FactoryUI:
             screen.blit(x_lbl, x_lbl.get_rect(center=cancel_rect.center))
 
         # Підказка
-        hint = fonts.get(9).render("F — закрити", True, self.DIM)
+        hint = fonts.get(9).render("F - закрити", True, self.DIM)
         screen.blit(hint, (px + W - hint.get_width() - PADDING, py + H - 18))

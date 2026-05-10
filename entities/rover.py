@@ -4,19 +4,19 @@ from core.camera import Camera
 
 # Модифікатори швидкості по висоті (нижче = швидше)
 HEIGHT_SPEED_MOD = {
-    0: 1.30,   # DEEP_LOWLANDS
-    1: 1.15,   # LOWLANDS
-    2: 1.00,   # PLAINS
-    3: 0.95,   # HIGH_PLAINS
-    4: 0.82,   # HIGHLANDS
-    5: 0.88,   # PLATEAUS
+    0: 1.30,   # DEEP_LOWLANDS (глибокі низовини)
+    1: 1.15,   # LOWLANDS (низовини)
+    2: 1.00,   # PLAINS (рівнини)
+    3: 0.95,   # HIGH_PLAINS (високі рівнини)
+    4: 0.82,   # HIGHLANDS (височини)
+    5: 0.88,   # PLATEAUS (плато)
     6: 0.00,   # MOUNTAINS — непрохідно
 }
 
 
 class Rover:
     MAX_SPEED    = 320.0    # пікселів/с
-    ACCELERATION = 900.0    # пікселів/с²
+    ACCELERATION = 900.0    # пікселів/с² (фізіка, ми як раз це в 9 классі вивчали)
     FRICTION     = 0.82     # множник за кадр
     SIZE         = 24       # радіус для колізій
 
@@ -25,8 +25,8 @@ class Rover:
         self.y   = y
         self.vx  = 0.0
         self.vy  = 0.0
-        self.angle = 0.0
-        self.speed_mod_external = 1.0   # від кризи (буря)      # градуси для повороту спрайту
+        self.angle = 0.0    # градуси для повороту спрайту
+        self.speed_mod_external = 1.0   # від кризи (буря)     
         self._texture: pygame.Surface | None = None
         self._tex_orig: pygame.Surface | None = None  # оригінал для повороту
 
@@ -38,7 +38,7 @@ class Rover:
         except Exception as e:
             print(f"[Rover] texture load failed: {e}")
 
-    # ---------------------------------------------------------------- update
+    # ОНОВЛЕННЯ!!!!!!!!
 
     def update(self, dt: float, keys, world):
         # Вектор введення
@@ -83,7 +83,7 @@ class Rover:
         new_x = self.x + self.vx * dt
         new_y = self.y + self.vy * dt
 
-        # Колізія по осях окремо — не застрягаємо в кутах
+        # Колізія по осях окремо - не застрягаємо в кутах
         if self._can_move_to(new_x, self.y, world):
             self.x = new_x
         else:
@@ -104,7 +104,7 @@ class Rover:
         tile = world.get_tile_at_world(x, y)
         return tile is not None and tile.passable
 
-    # ---------------------------------------------------------------- render
+    # РЕНДЕРИНГ!!!!!!!!
 
     def render(self, screen: pygame.Surface, camera: Camera):
         sx, sy = camera.apply(self.x, self.y)
@@ -115,7 +115,7 @@ class Rover:
             rect    = rotated.get_rect(center=(sx, sy))
             screen.blit(rotated, rect)
         else:
-            # Fallback — коло
+            # Якщо текстура не завантажена, малюємо простий круг з напрямком (типу як у старих іграх)
             pygame.draw.circle(screen, (220, 180, 60), (sx, sy), self.SIZE)
             pygame.draw.circle(screen, (255, 220, 80), (sx, sy), self.SIZE - 4)
             rad   = math.radians(self.angle - 90)

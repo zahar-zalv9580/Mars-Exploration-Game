@@ -1,8 +1,3 @@
-"""
-HUD — верхня панель гри.
-Показує: день, фазу, таймер дня, попередження, лог подій.
-"""
-from __future__ import annotations
 import pygame
 import math
 from ui import fonts
@@ -10,12 +5,12 @@ from systems.day_cycle import DayCycle
 
 # Кольори фаз
 PHASE_COLORS = {
-    "EARLY":    (100, 180, 100),
-    "EARLY+":   (140, 200, 80),
-    "MID":      (220, 180, 50),
-    "LATE":     (220, 130, 40),
-    "CRITICAL": (220, 60,  40),
-    "FINAL":    (180, 30,  30),
+    "РАННІЙ":    (100, 180, 100),
+    "РАННІЙ+":   (140, 200, 80),
+    "СЕРЕДИНА":      (220, 180, 50),
+    "ПІЗНЯ":     (220, 130, 40),
+    "КРИТИЧНА": (220, 60,  40),
+    "ФІНАЛ":    (180, 30,  30),
 }
 
 LOG_MAX     = 5      # скільки рядків логу видно
@@ -49,8 +44,7 @@ class HUD:
         self._render_top_bar(screen, day, sw, crisis)
         self._render_log(screen, day)
 
-    # ---------------------------------------------------------------- top bar
-
+    #верхня панель з інформацією про день, фазу та таймером до наступного дня
     def _render_top_bar(self, screen: pygame.Surface, day: DayCycle, sw: int, crisis=None):
         BAR_H = 44
         bg = pygame.Surface((sw, BAR_H), pygame.SRCALPHA)
@@ -61,12 +55,12 @@ class HUD:
         phase_color = PHASE_COLORS.get(day.phase, self.TEXT)
         cx = sw // 2
 
-        # ── День (центр) ──────────────────────────────────────────────────
-        day_str = f"DAY {day.day}"
+        #День і його прогрес
+        day_str = f"ДЕНЬ {day.day}"
         day_surf = fonts.get(20, bold=True).render(day_str, True, self.GOLD)
         screen.blit(day_surf, (cx - day_surf.get_width() // 2, 6))
 
-        # ── Прогрес дня (під написом) ─────────────────────────────────────
+        #Прогрес дня (бар під днем)
         bar_w = 120
         bar_x = cx - bar_w // 2
         bar_y = 30
@@ -82,7 +76,7 @@ class HUD:
         timer = fonts.get(9).render(day.time_in_day_str, True, self.DIM)
         screen.blit(timer, (cx - timer.get_width() // 2, 38))
 
-        # ── Фаза (ліво від дня) ───────────────────────────────────────────
+        #Фаза гри (ліво від дня)
         phase_surf = fonts.get(12, bold=True).render(
             day.phase, True, phase_color
         )
@@ -91,7 +85,7 @@ class HUD:
         label_surf = fonts.get(9).render(day.phase_label, True, self.DIM)
         screen.blit(label_surf, (cx - 160 - label_surf.get_width(), 24))
 
-        # ── Залишилось днів (право від дня) ──────────────────────────────
+        #Залишок днів (право від дня)
         left_str = f"{30 - day.day} ДНІВ ЗАЛИШИЛОСЬ" if day.day < 30 else "ОСТАННІЙ ДЕНЬ"
         left_color = self.ALERT if day.day >= 25 else self.TEXT
         left_surf = fonts.get(12, bold=True).render(left_str, True, left_color)
@@ -108,13 +102,13 @@ class HUD:
         pygame.draw.rect(screen, self.BORDER,
                          pygame.Rect(cx + 170, 26, total_bar_w, 5), 1)
 
-        # ── Іконка погоди (ліво вгорі) ──────────────────────────────────────
+        # Іконка кризи (якщо є)
         if crisis is not None:
             icon = crisis.weather_icon
             icon_surf = fonts.get(20).render(icon, True, (220, 180, 80))
             screen.blit(icon_surf, (10, 8))
 
-        # ── CRITICAL alert (день 25+) ─────────────────────────────────────
+        #Критична фаза - миготливе попередження
         if day.is_critical:
             blink = math.sin(self._blink * 4) > 0
             if blink:
@@ -123,7 +117,7 @@ class HUD:
                 )
                 screen.blit(alert, (cx + 170, 34))
 
-    # ---------------------------------------------------------------- log
+    #лог повідомлень з правого боку екрану, що зникають через деякий час
 
     def _render_log(self, screen: pygame.Surface, day: DayCycle):
         if not self._log:

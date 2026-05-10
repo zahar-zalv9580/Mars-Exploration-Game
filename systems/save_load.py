@@ -1,8 +1,5 @@
-"""
-Save/Load system — JSON format.
-Save file: saves/savegame.json
-"""
-from __future__ import annotations
+# Збереження та завантаження гри
+# Збереження за шляхом "saves/savegame.json"
 import json
 import os
 from dataclasses import asdict
@@ -21,7 +18,6 @@ def save_exists() -> bool:
 
 
 def save_game(game) -> bool:
-    """Зберігає стан гри. Повертає True при успіху."""
     try:
         _ensure_dir()
         from systems.resources import Resource
@@ -46,6 +42,7 @@ def save_game(game) -> bool:
                 for r in Resource
             },
             "storage_count": game.resources._storage_count,
+            "energy_capacity_bonus": game.resources._energy_capacity_bonus,
 
             # Популяція
             "population": {
@@ -69,6 +66,21 @@ def save_game(game) -> bool:
             # Blueprint inventory
             "blueprints": dict(game.buildings.blueprint_inv._items),
 
+            # Tile resources
+            "tile_resources": [
+                [
+                    {
+                        "iron":    game.world.grid[ty][tx].resources.iron,
+                        "water":   game.world.grid[ty][tx].resources.water,
+                        "silicon": game.world.grid[ty][tx].resources.silicon,
+                        "fuel":    game.world.grid[ty][tx].resources.fuel,
+                        "uranium": game.world.grid[ty][tx].resources.uranium,
+                    }
+                    for tx in range(game.world.width)
+                ]
+                for ty in range(game.world.height)
+            ],
+
             # Фабрика
             "factory": {
                 "queue":   game.factory._queue,
@@ -89,7 +101,7 @@ def save_game(game) -> bool:
                 for f in game.fragments._fragments
             ],
 
-            # Exploration — зберігаємо стан кожного тайлу
+            # Exploration - зберігаємо стан кожного тайлу
             "exploration": [
                 [int(game.world.grid[ty][tx].explore)
                  for tx in range(game.world.width)]
@@ -102,12 +114,11 @@ def save_game(game) -> bool:
         return True
 
     except Exception as e:
-        print(f"[Save] ERROR: {e}")
+        print(f"[Збереження] Помилка!: {e}")
         return False
 
 
 def load_game(game) -> bool:
-    """Завантажує стан гри. Повертає True при успіху."""
     if not save_exists():
         return False
     try:
@@ -115,7 +126,7 @@ def load_game(game) -> bool:
             data = json.load(f)
 
         if data.get("version", 0) != SAVE_VERSION:
-            print("[Load] Version mismatch — cannot load.")
+            print("[Завантаження] Версії різні.")
             return False
 
         from systems.resources import Resource
@@ -135,6 +146,7 @@ def load_game(game) -> bool:
             val = data["resources"].get(r.value, 0.0)
             game.resources.set(r, val)
         game.resources._storage_count = data.get("storage_count", 0)
+        game.resources._energy_capacity_bonus = data.get("energy_capacity_bonus", 0)
         game.resources._recalc_capacity()
 
         # Популяція
@@ -192,6 +204,21 @@ def load_game(game) -> bool:
                 tile = game.world.get_tile(tx, ty)
                 if tile:
                     tile.explore = TileExploreState(val)
+
+        # Tile resources
+        tile_res_data = data.get("tile_resources", [])
+        from world.tile import TileResources
+        for ty, row in enumerate(tile_res_data):
+            for tx, td in enumerate(row):
+                tile = game.world.get_tile(tx, ty)
+                if tile:
+                    tile.resources = TileResources(
+                        iron=td.get("iron"),
+                        water=td.get("water"),
+                        silicon=td.get("silicon"),
+                        fuel=td.get("fuel"),
+                        uranium=td.get("uranium"),
+                    )
 
         # Оновлюємо fog
         for ty in range(game.world.height):

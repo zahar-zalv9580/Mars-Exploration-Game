@@ -1,13 +1,8 @@
-"""
-Visual effects for weather events:
-  - Dust storm particles
-  - Screen overlay
-  - Glitch effect (reused from menus)
-"""
-from __future__ import annotations
+from asyncio import events
 import pygame
 import random
 import math
+from systems import crisis
 from systems.crisis import Modifiers, CrisisManager, EventType
 
 
@@ -42,8 +37,6 @@ class DustParticle:
 
 
 class WeatherFX:
-    """Рендерить всі погодні ефекти поверх гри."""
-
     PARTICLE_COUNT = 120
 
     def __init__(self, screen: pygame.Surface):
@@ -119,28 +112,34 @@ class WeatherFX:
         # Weather widget — правий верхній кут (під HUD)
         self._render_weather_widget(screen, crisis)
 
-    def _render_weather_widget(self, screen: pygame.Surface,
-                                crisis: CrisisManager):
+    def _render_weather_widget(self, screen: pygame.Surface, crisis: CrisisManager):
         events = crisis.active_events
         if not events:
             return
 
         from ui import fonts
+        # Правий нижній кут, щоб не заважати панелям ресурсів і популяції
         x = self._sw - 10
-        y = 50
+        y = self._sh - 140
 
-        for ev in events[:3]:   # максимум 3 одночасно
+        for ev in events[:3]:
+            # Додаємо іконку до назви
+            display_text = f"{ev.icon} {ev.label}"
+            # Вимірюємо ширину тексту
+            label_surf = fonts.get(10, bold=True).render(display_text, True, ev.color)
+            w = max(140, label_surf.get_width() + 24)  # динамічна ширина
+            h = 28
+
             # Фон
-            w, h = 140, 28
             bg = pygame.Surface((w, h), pygame.SRCALPHA)
-            bg.fill((10, 5, 2, 200))
+            bg.fill((10, 5, 2, 220))   # трохи щільніший фон
             screen.blit(bg, (x - w, y))
             pygame.draw.rect(screen, ev.color,
                              pygame.Rect(x - w, y, w, h), 1)
 
-            # Іконка + назва
+            # Текст з іконкою
             label = fonts.get(10, bold=True).render(
-                ev.label, True, ev.color
+                display_text, True, ev.color
             )
             screen.blit(label, (x - w + 6, y + 6))
 

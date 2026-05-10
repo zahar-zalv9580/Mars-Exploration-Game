@@ -1,4 +1,3 @@
-from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from systems.resources import Resource
@@ -20,14 +19,14 @@ class BuildingType(Enum):
 
 class BuildingState(Enum):
     ACTIVE       = auto()   # нормальна робота
-    INACTIVE     = auto()   # немає енергії / відключено
-    NO_RESOURCE  = auto()   # не вистачає вхідного ресурсу
+    INACTIVE     = auto()   # немає енергії або відключено
+    NO_RESOURCE  = auto()   # не вистачає ресурсу
     DISCONNECTED = auto()   # не підключено до хабу
     DAMAGED      = auto()   # пошкоджено
-    CONSTRUCTING = auto()   # будується (на майбутнє)
+    CONSTRUCTING = auto()   # будується, але ще не працює
 
 
-# Кольори рамки для кожного стану
+# Кольори рамки для кожного стану (юху!)
 STATE_BORDER_COLOR: dict[BuildingState, tuple[int,int,int]] = {
     BuildingState.ACTIVE:       (80,  220, 80),
     BuildingState.INACTIVE:     (80,  80,  80),
@@ -50,7 +49,7 @@ class BuildingDef:
     is_hub:      bool  = False
     gives_storage: bool = False
     # Анімації: список назв ефектів які підтримує ця будівля
-    # Значення: 'pulse' | 'smoke' | 'glow' | 'blink'
+    # Значення: 'pulse', 'smoke', 'glow', 'blink'
     fx: list[str] = field(default_factory=list)
 
 
@@ -58,8 +57,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
 
     BuildingType.HUB: BuildingDef(
         type=BuildingType.HUB,
-        label="Main Hub",
-        description="Colony center. Destruction = defeat.",
+        label="Головний Купол",
+        description="Центр колонії. Знищення = поразка.",
         cost={Resource.IRON: 0},
         produces={},
         consumes={Resource.ENERGY: 2.0},
@@ -69,8 +68,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.HABITAT: BuildingDef(
         type=BuildingType.HABITAT,
-        label="Habitat Module",
-        description="Increases population capacity.",
+        label="Модуль Проживання",
+        description="Збільшує місткість населення.",
         cost={Resource.IRON: 30.0},
         produces={},
         consumes={Resource.ENERGY: 1.0, Resource.FOOD: 0.5},
@@ -78,8 +77,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.GREENHOUSE: BuildingDef(
         type=BuildingType.GREENHOUSE,
-        label="Greenhouse",
-        description="Produces food from water and energy.",
+        label="Теплиця",
+        description="Виробляє їжу з води та енергії.",
         cost={Resource.IRON: 25.0, Resource.WATER: 10.0},
         produces={Resource.FOOD: 2.0},
         consumes={Resource.ENERGY: 1.5, Resource.WATER: 0.5},
@@ -87,8 +86,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.SOLAR: BuildingDef(
         type=BuildingType.SOLAR,
-        label="Solar Panel",
-        description="Generates energy. Better on highlands.",
+        label="Сонячна Панель",
+        description="Генерує енергію. Краще на висотах.",
         cost={Resource.IRON: 20.0, Resource.SILICON: 10.0},
         produces={},
         consumes={},
@@ -96,8 +95,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.EXTRACTOR: BuildingDef(
         type=BuildingType.EXTRACTOR,
-        label="Extractor",
-        description="Mines resources based on tile biome.",
+        label="Бур",
+        description="Видобуває ресурси залежно від біома плитки.",
         cost={Resource.IRON: 40.0},
         produces={},
         consumes={Resource.ENERGY: 2.0},
@@ -105,8 +104,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.STORAGE: BuildingDef(
         type=BuildingType.STORAGE,
-        label="Storage",
-        description="Increases resource storage capacity.",
+        label="Склад",
+        description="Збільшує місткість сховища ресурсів.",
         cost={Resource.IRON: 35.0},
         produces={},
         consumes={Resource.ENERGY: 0.5},
@@ -115,8 +114,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.FACTORY: BuildingDef(
         type=BuildingType.FACTORY,
-        label="Factory",
-        description="Crafts blueprints and components.",
+        label="Фабрика",
+        description="Виготовляє креслення та компоненти.",
         cost={Resource.IRON: 50.0, Resource.SILICON: 15.0},
         produces={},
         consumes={Resource.ENERGY: 3.0},
@@ -124,8 +123,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.LABORATORY: BuildingDef(
         type=BuildingType.LABORATORY,
-        label="Laboratory",
-        description="Unlocks lore and technologies.",
+        label="Лабораторія",
+        description="Розблоковує лор (підказка - це важливо).",
         cost={Resource.IRON: 45.0, Resource.SILICON: 20.0},
         produces={},
         consumes={Resource.ENERGY: 2.0},
@@ -133,8 +132,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.BATTERY: BuildingDef(
         type=BuildingType.BATTERY,
-        label="Battery Array",
-        description="Stores energy for use during storms and night.",
+        label="Батарея",
+        description="Збільшує місткість сховища енергії на 100.",
         cost={Resource.IRON: 30.0, Resource.SILICON: 20.0},
         produces={},
         consumes={},
@@ -142,8 +141,8 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.REACTOR: BuildingDef(
         type=BuildingType.REACTOR,
-        label="Nuclear Reactor",
-        description="Generates massive energy. Requires uranium.",
+        label="АЕС",
+        description="Генерує масивну енергію. Потребує уран.",          #ох боже... ЗБАГАЧЕНИЙ УРАН!?!?!?
         cost={Resource.IRON: 80.0, Resource.SILICON: 40.0, Resource.URANIUM: 10.0},
         produces={Resource.ENERGY: 18.0},
         consumes={Resource.URANIUM: 0.05},
@@ -152,9 +151,9 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
     ),
     BuildingType.JAMMER: BuildingDef(
         type=BuildingType.JAMMER,
-        label="Signal Jammer",
-        description="Hides colony from Observers. Final goal.",
-        cost={Resource.IRON: 100.0, Resource.SILICON: 80.0, Resource.URANIUM: 20.0},
+        label="Глушилка",
+        description="Ховає колонію від Спостерігачів. Фінальна мета.",
+        cost={},
         produces={},
         consumes={Resource.ENERGY: 20.0},
         fx=["pulse", "glow"],
@@ -162,7 +161,7 @@ BUILDING_DEFS: dict[BuildingType, BuildingDef] = {
 
 }
 
-INVENTORY_ORDER: list[BuildingType] = [
+INVENTORY_ORDER: list[BuildingType] = [                     # порядок для UI
     BuildingType.HUB,
     BuildingType.HABITAT,
     BuildingType.GREENHOUSE,

@@ -3,13 +3,13 @@ from ui import fonts
 from systems.resources import ResourceSystem, Resource
 
 RESOURCE_STYLE: dict[Resource, dict] = {
-    Resource.ENERGY:  {"label": "Energy",  "color": (255, 220, 50)},
-    Resource.IRON:    {"label": "Iron",    "color": (180, 130, 90)},
-    Resource.WATER:   {"label": "Water",   "color": (80,  160, 220)},
-    Resource.SILICON: {"label": "Silicon", "color": (140, 200, 140)},
-    Resource.FUEL:    {"label": "Fuel",    "color": (220, 120, 50)},
-    Resource.URANIUM: {"label": "Uranium", "color": (130, 220, 100)},
-    Resource.FOOD:    {"label": "Food",    "color": (180, 220, 80)},
+    Resource.ENERGY:  {"label": "Енергія",  "color": (255, 220, 50)},
+    Resource.IRON:    {"label": "Залізо",    "color": (180, 130, 90)},
+    Resource.WATER:   {"label": "Вода",   "color": (80,  160, 220)},
+    Resource.SILICON: {"label": "Силікон", "color": (140, 200, 140)},
+    Resource.FUEL:    {"label": "Паливо",    "color": (220, 120, 50)},
+    Resource.URANIUM: {"label": "Уран", "color": (130, 220, 100)},
+    Resource.FOOD:    {"label": "Їжа",    "color": (180, 220, 80)},
 }
 
 PANEL_WIDTH  = 220
@@ -41,7 +41,7 @@ class ResourcePanel:
         pygame.draw.rect(screen, self.BORDER_COLOR,
                          pygame.Rect(x, y, PANEL_WIDTH, panel_h), 1)
 
-        title = fonts.get(11, bold=True).render("RESOURCES", True, (180, 80, 30))
+        title = fonts.get(11, bold=True).render("Ресурси", True, (180, 80, 30))
         screen.blit(title, (x + PADDING, y + 4))
 
         for i, r in enumerate(Resource):
@@ -81,7 +81,7 @@ class ResourcePanel:
         val = fonts.get(10).render(
             f"{int(amount)}/{int(cap)}", True, self.TEXT_COLOR
         )
-        # Якщо є дельта — зсуваємо вліво
+        # Якщо є дельта - зсуваємо вліво
         val_x = px + PANEL_WIDTH - val.get_width() - PADDING
         if abs(delta) > 0.01:
             val_x -= (d_surf.get_width() + 4)

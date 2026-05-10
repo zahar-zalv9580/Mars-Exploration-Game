@@ -1,9 +1,9 @@
-from __future__ import annotations
 import pygame
 from ui import fonts
 from entities.building import Building, BuildingType, BuildingState
 from systems.resources import ResourceSystem, Resource
 from systems.building_manager import BuildingManager
+from core import audio
 
 
 class JammerUI:
@@ -41,7 +41,8 @@ class JammerUI:
                 return True
             if event.key == pygame.K_SPACE:
                 self.activating = True
-                self._message = "Activation started..."
+                self._message = "Початок активації..."
+                audio.play_sound('jammer_start')
                 return True
 
         return self.visible
@@ -58,13 +59,13 @@ class JammerUI:
             return False
 
         if jammer_building is None:
-            self._message = "No active Jammer nearby."
+            self._message = "Немає активного Jammer поруч." 
             self.activating = False
             self.progress = 0.0
             return False
 
         if not self.activating:
-            self._message = "Press [SPACE] to start Jammer activation."
+            self._message = "Натисніть [SPACE] аби активувати Jammer."
             return False
 
         enough_energy = resources.ratio(Resource.ENERGY) >= self.MIN_ENERGY_RATIO
@@ -72,25 +73,25 @@ class JammerUI:
             (jammer_building.tx, jammer_building.ty), False
         )
         if not jammer_building.is_active or not enough_energy or not has_workers:
-            self._message = "Activation interrupted. Requirements lost."
+            self._message = "Активація перервана. Прогрес втрачено."
             self.activating = False
             self.progress = 0.0
             return False
 
         energy_drain = self.ENERGY_DRAIN_RATE * dt
         if not resources.consume(Resource.ENERGY, energy_drain):
-            self._message = "Energy depleted. Activation failed."
+            self._message = "Енергії немає. Активація не успішна."
             self.activating = False
             self.progress = 0.0
             return False
 
         self.progress += dt / self.REQUIRED_TIME
-        self._message = "Activating Jammer..."
+        self._message = "Активуємо Jammer..."
         if self.progress >= 1.0:
             self.progress = 1.0
             self.visible = False
             self.activating = False
-            self._message = "Jammer activated."
+            self._message = "Jammer активований."
             return True
 
         return False
@@ -109,11 +110,11 @@ class JammerUI:
         pygame.draw.rect(panel, (180, 80, 30), pygame.Rect(0, 0, w, h), 2)
         screen.blit(panel, (px, py))
 
-        title = fonts.get(18, bold=True).render("JAMMER ACTIVATION", True, (220, 180, 80))
+        title = fonts.get(18, bold=True).render("АКТИВАЦІЯ ГЛУШИЛКИ", True, (220, 180, 80))
         screen.blit(title, (px + 18, py + 16))
 
         desc = fonts.get(11).render(
-            "KEEP ENERGY ABOVE 80% AND MAINTAIN CREW UNTIL COMPLETE.", True,
+            "ЗБЕРІГАЙТЕ ЕНЕРГІЮ БІЛЬШЕ 80%, І ЕКІПАЖ; ДО КІНЦЯ.", True,
             (190, 190, 180)
         )
         screen.blit(desc, (px + 18, py + 48))
@@ -137,6 +138,6 @@ class JammerUI:
         screen.blit(pct, (px + w // 2 - pct.get_width() // 2, bar_y + bar_h // 2 - pct.get_height() // 2))
 
         hint = fonts.get(10).render(
-            "[SPACE] START  |  [J/ESC] CANCEL", True, (140, 140, 140)
+            "[SPACE] СТАРТ  |  [J/ESC] Зупинити", True, (140, 140, 140)
         )
         screen.blit(hint, (px + 18, py + h - 30))

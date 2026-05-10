@@ -1,7 +1,3 @@
-"""
-Генерація ресурсів для кожної клітинки карти.
-Викликається один раз при старті з generator.py
-"""
 import random
 from world.tile import Tile, Biome, HeightLevel, TileResources
 
@@ -84,10 +80,9 @@ def _roll_richness(resource: str, rng: random.Random) -> int:
 
 
 def generate_tile_resources(tile: Tile, rng: random.Random):
-    """Заповнює tile.resources на основі біому та висоти."""
     height_mod = HEIGHT_SPAWN_MOD.get(tile.height, 0.0)
     if height_mod == 0.0:
-        return   # гори — без ресурсів
+        return   # гори - без ресурсів
 
     res = TileResources()
     for resource, biome_chances in SPAWN_CHANCE.items():

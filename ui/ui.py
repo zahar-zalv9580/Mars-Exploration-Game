@@ -1,3 +1,5 @@
+from tkinter import font
+
 import pygame
 from world.tile import Tile
 from ui.resource_panel import ResourcePanel
@@ -62,15 +64,15 @@ class UI:
 
     def _render_hints(self):
         from ui import fonts
+        sw, sh = self.screen.get_size()
         font = fonts.get(10)
         hint = font.render(
-            "1-9: build  |  E: inventory  |  Q: scan  |  F: factory  |  H: overlay  |  ESC: cancel",
+            "1-9: хотбар  |  E: інвентар  |  Q: скан  |  F: фабрика  |  L: лабораторія  |  J: глушилка  |  H: оверлей  |  ESC: зкпинити дію",
             True, (100, 100, 90)
         )
-        self.screen.blit(hint, (10, 28))
+        self.screen.blit(hint, (10, sh - 30))
 
-
-# ── Tile Info Panel ──────────────────────────────────────────────────────────
+#Панель інфи
 
 class TileInfoPanel:
     WIDTH   = 270
@@ -140,7 +142,7 @@ class TileInfoPanel:
             if amount <= 0:
                 continue
             color = TILE_RES_COLORS.get(res.value, self.TEXT_COLOR)
-            lines.append((f"+{amount:.1f}/s {res.value.capitalize()}", color))
+            lines.append((f"+{amount:.1f}/с {res.value.capitalize()}", color))
         return lines
 
     def render(self, screen: pygame.Surface):

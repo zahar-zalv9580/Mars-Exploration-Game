@@ -1,7 +1,4 @@
-"""
-Spawns signal fragments on the map at game start.
-Rover can collect them by pressing E near them.
-"""
+# Система спавну фрагментів сигналу на карті. Відповідає за розміщення, збір та рендеринг фрагментів.
 from __future__ import annotations
 import random
 from systems.lore import SignalFragment, FragmentRarity, roll_fragment_rarity
@@ -34,7 +31,7 @@ class FragmentSpawner:
                 placed += 1
 
     def try_collect(self, rover_tx: int, rover_ty: int) -> SignalFragment | None:
-        """Збирає найближчий фрагмент якщо ровер поруч."""
+        # Перевіряє чи є фрагмент поруч і збирає його (видаляє зі списку). Повертає зібраний фрагмент або None.
         for frag in self._fragments:
             dist = max(abs(frag.tx - rover_tx), abs(frag.ty - rover_ty))
             if dist <= COLLECT_RADIUS:
@@ -43,7 +40,6 @@ class FragmentSpawner:
         return None
 
     def nearby_fragment(self, rover_tx: int, rover_ty: int) -> SignalFragment | None:
-        """Повертає фрагмент поруч (для підказки E)."""
         for frag in self._fragments:
             if not frag:
                 continue

@@ -1,8 +1,4 @@
-"""
-Day/Night cycle + game phase system.
-1 day = 120 real seconds.
-30 days total.
-"""
+# Система дня і циклу гри. Відповідає за відлік часу, фази гри та події що відбуваються на початку дня.
 from __future__ import annotations
 from dataclasses import dataclass, field
 
@@ -10,12 +6,12 @@ DAY_DURATION = 120.0   # секунд
 
 # Фази гри
 PHASES = [
-    (1,  5,  "EARLY",    "Establish base"),
-    (6,  10, "EARLY+",   "Expand & survive"),
-    (11, 20, "MID",      "Optimize colony"),
-    (21, 24, "LATE",     "Prepare for threat"),
-    (25, 29, "CRITICAL", "Observers incoming"),
-    (30, 30, "FINAL",    "Last stand"),
+    (1,  5,  "РАННІЙ",    "Побудуй базу"),
+    (6,  10, "РАННІЙ+",   "Розширюйся"),
+    (11, 20, "СЕРЕДИНА",      "Облаштуйся"),
+    (21, 24, "ПІЗНЯ",     "Готуйся..."),
+    (25, 29, "КРИТИЧНА", "Спостерігачі вже близько."),
+    (30, 30, "ФІНАЛ",    "Остаточний день. Врятуйся, якщо можеш."),
 ]
 
 # Події що відбуваються на початку конкретного дня
@@ -37,11 +33,11 @@ DAY_EVENTS: dict[int, list[str]] = {
 
 # Множник частоти подій по фазах (використовується CrisisSystem)
 PHASE_EVENT_RATE: dict[str, float] = {
-    "РАНО":    0.1,
-    "РАНО+":   0.3,
+    "РАННІЙ":    0.1,
+    "РАННІЙ+":   0.3,
     "СЕРЕДИНА":      0.5,
-    "ПІЗНІЙ":     0.8,
-    "КРИТИЧНО": 1.2,
+    "ПІЗНЯ":     0.8,
+    "КРИТИЧНА": 1.2,
     "ФІНАЛ":    1.5,
 }
 
@@ -56,7 +52,6 @@ class DayCycle:
     new_messages: list[str] = field(default_factory=list)
 
     def tick(self, dt: float) -> bool:
-        """Оновлює час. Повертає True якщо почався новий день."""
         self.time_in_day += dt
         if self.time_in_day >= DAY_DURATION:
             self.time_in_day -= DAY_DURATION
@@ -71,7 +66,7 @@ class DayCycle:
 
     @property
     def progress(self) -> float:
-        """Прогрес поточного дня 0.0-1.0."""
+        # 0.0 - 1.0 прогрес дня
         return self.time_in_day / DAY_DURATION
 
     @property
@@ -79,7 +74,7 @@ class DayCycle:
         for start, end, name, _ in PHASES:
             if start <= self.day <= end:
                 return name
-        return "FINAL"
+        return "ФІНАЛ"  
 
     @property
     def phase_label(self) -> str:
@@ -103,7 +98,7 @@ class DayCycle:
     @property
     def time_left_str(self) -> str:
         days_left = self._total_days - self.day
-        return f"{days_left}d left"
+        return f"{days_left}днів залишилось" if days_left > 0 else "Остаточний день"
 
     @property
     def time_in_day_str(self) -> str:

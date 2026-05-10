@@ -1,19 +1,10 @@
-"""
-Всі екрани гри:
-  MainMenu, PauseMenu, GameOverScreen, EndingScreen
-Кожен має:
-  .handle_event(event) -> str | None   (назва дії)
-  .update(dt)
-  .render(screen)
-"""
-from __future__ import annotations
 import pygame
 import random
 import math
 from ui import fonts
 
 
-# ── Загальні кольори ────────────────────────────────────────────────────────
+#Загальні кольори 
 C_BG        = (5,  3,  2)
 C_RED       = (200, 50,  30)
 C_ORANGE    = (220, 130, 40)
@@ -24,7 +15,7 @@ C_GLITCH_R  = (220, 30,  30)
 C_GLITCH_B  = (30,  80, 220)
 
 
-# ── Частинки для головного меню ─────────────────────────────────────────────
+#Частинки для головного меню
 class _Particle:
     def __init__(self, sw: int, sh: int):
         self.reset(sw, sh)
@@ -57,7 +48,7 @@ class _Particle:
         surf.blit(s, (int(self.x - self.r), int(self.y - self.r)))
 
 
-# ── Кнопка ──────────────────────────────────────────────────────────────────
+#Кнопка
 class _Button:
     W, H = 280, 40
     C_IDLE   = (30, 15, 8)
@@ -90,7 +81,7 @@ class _Button:
         screen.blit(txt, txt.get_rect(center=self.rect.center))
 
 
-# ── Glitch-ефект ─────────────────────────────────────────────────────────────
+#Glitch-ефект
 class _GlitchFx:
     def __init__(self):
         self._timer    = 0.0
@@ -132,12 +123,10 @@ class _GlitchFx:
             screen.blit(strip,  (-shift // 2, y))
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # ГОЛОВНЕ МЕНЮ
-# ═══════════════════════════════════════════════════════════════════════════
 class MainMenu:
     TITLE    = "MARS: R-ARK PROTOCOL"
-    SUBTITLE = "// RED ARKORP COLONIZATION UNIT //"
+    SUBTITLE = "// RED ARKORP КОЛОНІЗАЦІЙНА ГРА //"
 
     def __init__(self, screen: pygame.Surface, has_save: bool = False):
         sw, sh = screen.get_size()
@@ -149,11 +138,11 @@ class MainMenu:
         cy_start = sh // 2 + 20
         self._buttons: list[_Button] = []
         if has_save:
-            self._buttons.append(_Button("CONTINUE",     "continue",  sw // 2, cy_start))
+            self._buttons.append(_Button("Продовжити",     "continue",  sw // 2, cy_start))
             cy_start += 52
-        self._buttons.append(_Button("NEW GAME",     "new_game",  sw // 2, cy_start))
+        self._buttons.append(_Button("Нова гра",     "new_game",  sw // 2, cy_start))
         cy_start += 52
-        self._buttons.append(_Button("EXIT",         "exit",      sw // 2, cy_start))
+        self._buttons.append(_Button("Вихід",         "exit",      sw // 2, cy_start))
 
     def handle_event(self, event: pygame.event.Event) -> str | None:
         for btn in self._buttons:
@@ -208,24 +197,24 @@ class MainMenu:
             btn.render(screen)
 
         # Версія
-        ver = fonts.get(9).render("v0.1-hackathon", True, C_DIM)
+        ver = fonts.get(9).render("v0.1-хакатон версія", True, C_DIM)
         screen.blit(ver, (10, self._sh - 20))
 
         self._glitch.render(screen)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+
 # ПАУЗА
-# ═══════════════════════════════════════════════════════════════════════════
+
 class PauseMenu:
     def __init__(self, screen: pygame.Surface):
         sw, sh = screen.get_size()
-        cy = sh // 2 + 10
+        cy = sh // 2 - 40
         self._buttons = [
-            _Button("RESUME",    "resume",    sw // 2, cy),
-            _Button("SAVE GAME", "save",      sw // 2, cy + 52),
-            _Button("MAIN MENU", "main_menu", sw // 2, cy + 104),
-            _Button("EXIT",      "exit",      sw // 2, cy + 156),
+            _Button("Продовжити",    "resume",    sw // 2, cy),
+            _Button("Зберегти гру", "save",      sw // 2, cy + 52),
+            _Button("Головне меню", "main_menu", sw // 2, cy + 104),
+            _Button("Вихід",      "exit",      sw // 2, cy + 156),
         ]
 
     def handle_event(self, event: pygame.event.Event) -> str | None:
@@ -249,7 +238,7 @@ class PauseMenu:
         sw, sh = screen.get_size()
 
         # Панель
-        pw, ph = 340, 330
+        pw, ph = 340, 370
         px, py = sw // 2 - pw // 2, sh // 2 - ph // 2 - 20
         panel = pygame.Surface((pw, ph), pygame.SRCALPHA)
         panel.fill((10, 5, 2, 220))
@@ -265,25 +254,25 @@ class PauseMenu:
             btn.render(screen)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+
 # GAME OVER
-# ═══════════════════════════════════════════════════════════════════════════
+
 class GameOverScreen:
     REASONS = {
-        "energy": "ENERGY COLLAPSE",
-        "food":   "FOOD SHORTAGE",
-        "hub":    "HUB DESTROYED",
+        "energy": "Втрата енергії",
+        "food":   "Нестача їжі",
+        "hub":    "Купол знищено",
     }
 
     def __init__(self, screen: pygame.Surface, reason: str = "hub"):
         sw, sh = screen.get_size()
-        self._reason  = self.REASONS.get(reason, "SYSTEM FAILURE")
+        self._reason  = self.REASONS.get(reason, "СИСТЕМНА ПОМИЛКА")
         self._glitch  = _GlitchFx()
         self._time    = 0.0
         cy = sh // 2 + 60
         self._buttons = [
-            _Button("PLAY AGAIN", "new_game",  sw // 2, cy),
-            _Button("MAIN MENU",  "main_menu", sw // 2, cy + 52),
+            _Button("Зіграти знову", "new_game",  sw // 2, cy),
+            _Button("Нова гра",  "main_menu", sw // 2, cy + 52),
         ]
 
     def handle_event(self, event: pygame.event.Event) -> str | None:
@@ -308,14 +297,14 @@ class GameOverScreen:
         flicker = abs(math.sin(self._time * 8)) > 0.3
         color = C_GLITCH_R if flicker else C_RED
 
-        title = fonts.get(32).render("CORRECTION EXECUTED", True, color)
+        title = fonts.get(32).render("Корекція виконана", True, color)
         screen.blit(title, (sw // 2 - title.get_width() // 2, sh // 2 - 140))
 
         sub = fonts.get(14).render(self._reason, True, C_ORANGE)
         screen.blit(sub, (sw // 2 - sub.get_width() // 2, sh // 2 - 80))
 
         msg = fonts.get(10).render(
-            "// PLANETARY CORRECTION OBJECT HAS REACHED MARS //",
+            "// ПЛАНЕТАРНИЙ КОРЕКЦІЙНИЙ ОБ'ЄКТ ДОСЯГНУВ МАРСУ //",
             True, C_DIM
         )
         screen.blit(msg, (sw // 2 - msg.get_width() // 2, sh // 2 - 40))
@@ -326,38 +315,39 @@ class GameOverScreen:
         self._glitch.render(screen)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
+
 # ENDING SCREEN
-# ═══════════════════════════════════════════════════════════════════════════
+
 ENDING_DATA = {
     "good": {
-        "title":   "SIGNAL HIDDEN",
+        "title":   "Сигнал заховано",
         "color":   (80, 220, 120),
         "lines": [
-            "The Signal Jammer activated.",
-            "The colony vanished from Observer sensors.",
-            "Mars goes silent.",
-            "Humanity survives.",
+            "Глушилка активована.",
+            "Колонія захована від сенсорів Спостерігачів.",
+            "Марс затих.",
+            "Людство... вижило.",
         ],
     },
     "bad": {
-        "title":   "CORRECTION EXECUTED",
+        "title":   "Корекція виконана",
         "color":   C_GLITCH_R,
         "lines": [
-            "The Planetary Correction Object entered orbit.",
-            "The signal was never hidden.",
-            "Mars, like Earth, falls silent.",
+            "ПЛАНЕТАРНИЙ КОРЕКЦІЙНИЙ ОБ'ЄКТ НА ОРБІТІ МАРСУ.",
+            "Сигнал не був захований.",
+            "Марс затихне як Земля.",
+            "Людство? Сторінка історії Спостерігачів.",
         ],
     },
     "secret": {
         "title":   "R-ARK OVERRIDE",
         "color":   C_GOLD,
         "lines": [
-            "All lore logs recovered.",
-            "The R-ARK-NET corruption identified.",
-            "Signal rerouted. Observers... confused.",
-            "The colony broadcasts a new frequency.",
-            "Unknown response incoming.",
+            "ВСІ ЛОГИ ВІДКРИТО.",
+            "R-ARK-NET відновлено.",
+            "Сигнал перенаправлено.",
+            "Колонія на новій лінії.",
+            "Невідома відповідь...",
         ],
     },
 }
@@ -377,16 +367,16 @@ class EndingScreen:
 
         cy = sh // 2 + 160
         self._buttons = [
-            _Button("PLAY AGAIN", "new_game",  sw // 2, cy),
-            _Button("MAIN MENU",  "main_menu", sw // 2, cy + 52),
+            _Button("Зіграти знову", "new_game",  sw // 2, cy),
+            _Button("Головне меню",  "main_menu", sw // 2, cy + 52),
         ]
         if self._archive_ids:
             self._buttons.append(
-                _Button("VIEW ARCHIVE", "archive", sw // 2, cy + 104)
+                _Button("Подивитися на архів.", "archive", sw // 2, cy + 104)
             )
 
         self._archive_buttons = [
-            _Button("BACK", "back", sw // 2, sh - 80)
+            _Button("НАЗАД", "back", sw // 2, sh - 80)
         ]
 
     def handle_event(self, event: pygame.event.Event) -> str | None:
@@ -470,11 +460,11 @@ class EndingScreen:
     def _render_archive(self, screen: pygame.Surface, sw: int, sh: int):
         from systems.lore import LOG_BY_ID
 
-        title = fonts.get(24, bold=True).render("ARCHIVE VIEWER", True, C_GOLD)
+        title = fonts.get(24, bold=True).render("АРХІВ", True, C_GOLD)
         screen.blit(title, (sw // 2 - title.get_width() // 2, 48))
 
         if not self._archive_ids:
-            hint = fonts.get(14).render("No logs discovered.", True, C_TEXT)
+            hint = fonts.get(14).render("Немає логів.", True, C_TEXT)
             screen.blit(hint, (sw // 2 - hint.get_width() // 2, sh // 2))
         else:
             log_id = self._archive_ids[self._archive_index]
@@ -490,7 +480,7 @@ class EndingScreen:
                     text_surf = fonts.get(12).render(line, True, C_TEXT)
                     screen.blit(text_surf, (120, 180 + i * 24))
             nav = fonts.get(11).render(
-                f"< LEFT   [{self._archive_index + 1}/{len(self._archive_ids)}]   RIGHT >",
+                f"< Ліворуч   [{self._archive_index + 1}/{len(self._archive_ids)}]   Праворуч >",
                 True, C_DIM
             )
             screen.blit(nav, (sw // 2 - nav.get_width() // 2, sh - 120))

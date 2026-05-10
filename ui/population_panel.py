@@ -4,7 +4,6 @@ from systems.population import PopulationManager
 
 
 class PopulationPanel:
-    """Компактна панель популяції — під resource panel."""
 
     WIDTH   = 220
     PADDING = 10
@@ -66,8 +65,4 @@ class PopulationPanel:
         pygame.draw.rect(screen, self.BORDER_COLOR,
                          pygame.Rect(bar_x, bar_y, bar_w, 6), 1)
 
-        # Остання подія
-        if pop.events:
-            ev_font = fonts.get(9)
-            ev = ev_font.render(pop.events[-1][:34], True, (160, 140, 100))
-            screen.blit(ev, (x + self.PADDING, y + self.HEIGHT + 2))
+
